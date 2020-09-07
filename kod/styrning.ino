@@ -7,7 +7,6 @@
 #define state_2 10000
 #define state_3 13000
 #define state_4 16000
-#define state_5 20000
 
 bool checkState(int state);
 void changeState(int state);
@@ -20,7 +19,7 @@ uint8_t rightPumpVal = 0;
 
 void setup() {
 	pinMode(rightPump, OUTPUT);
-	pinMode(rightPump, OUTPUT);
+	pinMode(leftPump, OUTPUT);
 
 	// Make sure outputs are low at start
 	digitalWrite(rightPump, LOW);
@@ -30,6 +29,7 @@ void setup() {
 void loop() {
 	bool stateChange = false;
 	unsigned long currMillis = 0;
+	unsigned long diff = 0;
 
 	currMillis = millis();
 	diff = currMillis - prevMillis;
@@ -68,7 +68,7 @@ bool checkState(int state){
 		returnVal = false;
 	}
 
-	return returnValM
+	return returnVal;
 }
 
 void changeState(int state){
