@@ -33,6 +33,12 @@ struct State state3 = { state_3,  ON, OFF, state_2, state_3, NULL };
 struct State state4 = {state_4,  OFF, ON, state_3, state_4, NULL};
 struct State* currentState = NULL;
 
+// Counter and compare values
+const uint16_t t1_load = 0;
+const uint16_t t1_comp = 20000; // Gives 10 ms interrupts 
+
+unsigned long currMillis = 0;
+
 bool checkState();
 void changeState();
 
@@ -43,6 +49,24 @@ void setup() {
 	state3.next = &state4;
 	state4.next = &state1;
 	currentState = &state1;
+
+	// Reset Timer1 control register A
+	TCCR1A = 0;
+
+	// Set prescaler to 256
+	TCCR1B &= ~(1 << CS12);
+	TCCR1B |= (1 << CS11);
+	TCCR1B &= ~(1 << CS10);
+
+	// Reset Timer1 and set compare value
+	TCNT1 = t1_load;
+	OCR1A = t1_comp;
+
+	// Enable Timer1 compare interrupt
+	TIMSK1 = (1 << OCIE1A);
+
+	// Enable global interrupts
+	sei();
 
 	pinMode(rightPump, OUTPUT);
 	pinMode(leftPump, OUTPUT);
@@ -67,20 +91,23 @@ void loop() {
 *																			 *
 *	Checks if the time passed since boot has surpassed the max state time.	 *
 *	Returns a boolean with true if max state time has passed i.e we need	 *
-*	to change the state. Else it returns false.								 *																			 *
+*	to change the state. Else it returns false.								 *
 *																			 *
 *****************************************************************************/
 
 bool checkState() {
 	static unsigned long prevMillis = 0;
-	unsigned long currMillis = 0;
 	unsigned long diff = 0;
 	bool changeState = false;
 
-	currMillis = millis();
+	// If there is a overflow reset prevMillis aswell
+	if(prevMillis > currMillis){
+		prevMillis = 0;
+	}
+
 	diff = currMillis - prevMillis;
 
-	if (diff > currentState->state_end){
+	if ((int) diff > currentState->state_end){
 		changeState = true;
 
 		if(currentState->state_nr == state_4){
@@ -95,7 +122,7 @@ bool checkState() {
 /*****************************************************************************
 *																			 *
 *	Function that handles the actual change of state. Current state pointer	 *
-*	moves and new values are written to the leds. 							 *																			 *
+*	moves and new values are written to the leds. 							 *
 *																			 *
 *****************************************************************************/
 
@@ -105,4 +132,16 @@ void changeState() {
 
 	digitalWrite(leftPump, currentState->leftPumpVal);
 	digitalWrite(rightPump, currentState->rightPumpVal);
+}
+
+/*****************************************************************************
+*																			 *
+*	Interrupt service rutine, increases the timer value with 10 each tick.	 *
+*	The timer still gives milliseconds since start but with lower sampling.  *
+*																			 *
+*****************************************************************************/
+
+ISR(TIMER1_COMPA_vect){
+	TCNT1 = t1_load;
+	currMillis = currMillis + 10;
 }
