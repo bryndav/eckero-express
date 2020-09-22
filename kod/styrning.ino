@@ -36,8 +36,7 @@ struct State* currentState = NULL;
 // Counter and compare values
 const uint16_t t1_load = 0;
 const uint16_t t1_comp = 20000; // Gives 10 ms interrupts 
-
-unsigned long currMillis = 0;
+volatile unsigned long currMillis = 0;
 
 bool checkState();
 void changeState();
@@ -86,7 +85,6 @@ void loop() {
 	}
 }
 
-
 /*****************************************************************************
 *																			 *
 *	Checks if the time passed since boot has surpassed the max state time.	 *
@@ -117,7 +115,6 @@ bool checkState() {
 
 	return changeState;
 }
-
 
 /*****************************************************************************
 *																			 *
