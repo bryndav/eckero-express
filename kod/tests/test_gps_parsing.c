@@ -106,7 +106,6 @@ struct Position getPos(int tries){
 	return currPos;	
 }
 
-
 float degreeConversion(char* nmea){
 	float degrees = 0.0;
 	float decimals = 0.0;
