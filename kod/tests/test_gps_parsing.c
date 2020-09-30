@@ -5,7 +5,7 @@
 #include <math.h>
 
 struct Position {
-	char UTCtime[9];
+	char UTCtime[10];
 	float latitude;
 	char latitudeDir;
 	float longitude;
@@ -13,6 +13,7 @@ struct Position {
 	int quality;
 	int numSats;
 	float altitude;
+	float bearing;
 	_Bool valid;
 };
 
@@ -30,6 +31,7 @@ int main() {
 		printf("Latitude direction: \t%c\n", currPos.latitudeDir);
 		printf("Longitude: \t\t%f\n", currPos.longitude);
 		printf("Longitude direction: \t%c\n", currPos.longitudeDir);
+		printf("Bearing: \t\t%f\n", currPos.bearing);
 		printf("Message quality: \t%d\n", currPos.quality);
 		printf("Number of satellites: \t%d\n", currPos.numSats);
 		printf("Altitude: \t\t%f\n", currPos.altitude);	
@@ -39,8 +41,9 @@ int main() {
 }
 
 struct Position getPos(int tries){
-	char NMEA[88] = "$GPGGA,092750.000,5321.6802,N,00630.3372,W,2,8,1.03,61.7,M,55.2,M,,*76\r\n";
-	struct Position currPos = {" ", 0.0, 'F', 0.0, 'F', 0, 0, 0.0, false};
+	char GPRMC[88] = "220516,A,5133.82,N,00042.24,W,173.8,231.8,130694,004.2,W*70\r\n";
+	char NMEA[88] = "092750.000,5321.6802,N,00630.3372,W,2,8,1.03,61.7,M,55.2,M,,*76\r\n";
+	struct Position currPos = {" ", 0.0, 'F', 0.0, 'F', 0, 0, 0.0, 0.0, false};
 	char work[12];
 	char *comp;
 
@@ -51,9 +54,6 @@ struct Position getPos(int tries){
 	if (tries > 0){
 			
 		comp = strtok(NMEA, ",");
-
-		// Throw away the leading $GPGGA
-		comp = strtok(NULL, ",");	
 
 		// Store UTC time in struct
 		strcpy(currPos.UTCtime, comp);
@@ -92,6 +92,17 @@ struct Position getPos(int tries){
 		// Store mean sea level
 		comp = strtok(NULL, ",");
 		currPos.altitude = (float) atof(comp);		
+	}
+
+	if(tries > 0){
+		comp = strtok(GPRMC, ",");
+
+		//Skip information until bearing
+		for(int i = 0; i < 7; i++){
+			comp = strtok(NULL, ",");
+		}
+
+		currPos.bearing = atof(comp);
 	}
 
 	// Check if position should be considered valid
