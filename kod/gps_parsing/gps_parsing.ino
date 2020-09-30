@@ -11,6 +11,7 @@ struct Position {
 	int quality;
 	int numSats;
 	float altitude;
+	float bearing;
 	bool valid;
 };
 
@@ -19,7 +20,7 @@ struct Position getPos();
 bool newCoordinates(float longitude, float latitude);
 void printPosition();
 
-struct Position currPos = {" ", 0.0, 'F', 0.0, 'F', 0, 0, 0.0, false};
+struct Position currPos = {" ", 0.0, 'F', 0.0, 'F', 0, 0, 0.0, 0.0, false};
 
 void setup() {
   	gps_serial.begin(9600);
@@ -40,16 +41,26 @@ void loop() {
 
 struct Position getPos(){
 	char NMEA[88];
-	struct Position tmpPos = {" ", 0.0, 'F', 0.0, 'F', 0, 0, 0.0, false};
+	char GPRMC[88];
+	struct Position tmpPos = {" ", 0.0, 'F', 0.0, 'F', 0, 0, 0.0, 0.0, false};
 	int index;
 	char work[12];
 	char *comp;
 
+	// Grab GPGGA message containing most relavant position data
 	if (gps_serial.find("$GPGGA,")){
 		index = gps_serial.readBytesUntil(0x0D, NMEA, 88);
     
 		// Uncomment to see raw serial string
 		//Serial.println(NMEA);
+	}
+
+	// Grab GPRMC message containing the bearing in true north format
+	if (gps_serial.find("$GPRMC,")){
+		gps_serial.readBytesUntil(0x0D, GPRMC, 88);
+
+		// Uncomment to see raw serial string
+		//Serial.println(GPRMC);
 	}
 
 	if (index > 60 ){
@@ -94,8 +105,19 @@ struct Position getPos(){
 		tmpPos.altitude = (float) atof(comp);		
 	}
 
+	if (index > 60 ){
+		comp = strtok(GPRMC, ",");
+
+		//Skip information until bearing
+		for(int i = 0; i < 7; i++){
+			comp = strtok(NULL, ",");
+		}
+
+    	(atof(comp) > 0.0 && atof(comp) < 360.0) ? tmpPos.bearing = atof(comp): tmpPos.bearing = currPos.bearing;
+	}	
+
 	// Check if position should be considered valid
-	if(tmpPos.quality >= 1 && tmpPos.numSats >= 4 && newCoordinates(tmpPos.longitude, tmpPos.latitude)){
+	if(tmpPos.quality >= 1 && tmpPos.numSats >= 3 && newCoordinates(tmpPos.longitude, tmpPos.latitude)){
 		tmpPos.valid = true;
 	}else{
 		tmpPos.valid = false;
@@ -180,6 +202,8 @@ void printPosition(){
   	Serial.println(currPos.longitude, 6);
   	Serial.print("Longitude direction: \t");
   	Serial.println(currPos.longitudeDir);
+  	Serial.print("Bearing: \t\t");
+  	Serial.println(currPos.bearing);
   	Serial.print("Message quality: \t");
   	Serial.println(currPos.quality);
   	Serial.print("Number of satellites: \t");
