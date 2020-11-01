@@ -5,7 +5,7 @@ void sendSMS();
 char* readSMS();
 int parseSMS(char* content);
 
-SoftwareSerial mySerial(3, 2);
+SoftwareSerial mySerial(10, 11);
 
 void setup() {
 	Serial.begin(9600);
@@ -15,22 +15,31 @@ void setup() {
 	Serial.println("Initializing...");
 	delay(1000);
 
+  Serial.println("Sending AT");
 	mySerial.println("AT"); // Handshake, returns OK if successfull
 	updateSerial();
+ Serial.println("Sending ATI");
 	mySerial.println("ATI"); // Reads GSM information
 	updateSerial();
+ Serial.println("Sending AT+CBC");
 	mySerial.println("AT+CBC"); // Reads battery status
 	updateSerial();
+ Serial.println("Sending AT+CSQ");
 	mySerial.println("AT+CSQ"); // Signal quality test, range 0-31;
 	updateSerial();
+ Serial.println("Sending AT+CCID");
 	mySerial.println("AT+CCID"); // Read SIM information, confirms SIM inserted
 	updateSerial();
+ Serial.println("Sending AT+CREG");
 	mySerial.println("AT+CREG?"); // Checks network registration
 	updateSerial();
+ Serial.println("Sending AT+COPS?");
 	mySerial.println("AT+COPS?"); // Asks for network operator
 	updateSerial();
+ Serial.println("Sending AT+CMGF=1");
 	mySerial.println("AT+CMGF=1"); // Configure TEXT mode
 	updateSerial();
+ Serial.println("Sending AT+CNMI=1,2,0,0,0");
 	mySerial.println("AT+CNMI=1,2,0,0,0"); // Configure how incoming messages should be handled
 	updateSerial();
 	sendSMS();
