@@ -28,6 +28,8 @@ int servo4_uS;
 unsigned long now;                      // Timing variables to update data at a regular interval                        
 unsigned long rc_update = 0;
 unsigned long last_PID_calc = 0;
+unsigned long last_debug_print = 0;
+int debug_rate = 1000;
 
 //Variables related to operations of the SUV
 
@@ -38,7 +40,7 @@ float depth;
 int dive_voltage;
 
 int i;
-float currentAngle = 0.0;
+int currentAngle = 0;
 byte f_byteArray[4];
 
 struct PIDdata{
@@ -89,7 +91,11 @@ void loop() {
     PID_dive = PID_Control(PID_dive, depth);
   }
 
-  printInfo();
+  if(now - last_debug_print > debug_rate){
+    last_debug_print = now;
+    printInfo();  
+  }
+  
 }
 
 void readRCInput(){
@@ -129,10 +135,10 @@ void readRCInput(){
     servo2_uS = calc_uS(mix2, 2);         // Apply the servo rates, direction and sub_trim for servo 2, and convert to a RC pulsewidth (microseconds, uS)          
     }
     else{                                 // MIXING OFF
-    servo1_uS = calc_uS(RC_in[2],1);      // Apply the servo rates, direction and sub_trim for servo 1, and convert to a RC pulsewidth (microseconds, uS)
-    servo2_uS = calc_uS(RC_in[3],2);      // Apply the servo rates, direction and sub_trim for servo 2, and convert to a RC pulsewidth (microseconds, uS)
-    servo3_uS = calc_uS(RC_in[4],3);      // Apply the servo rates, direction and sub_trim for servo 3, and convert to a RC pulsewidth (microseconds, uS)
-    servo4_uS = calc_uS(RC_in[5],4);      // Apply the servo rates, direction and sub_trim for servo 4, and convert to a RC pulsewidth (microseconds, uS)
+    servo1_uS = calc_uS(RC_in[0],1);      // Apply the servo rates, direction and sub_trim for servo 1, and convert to a RC pulsewidth (microseconds, uS)
+    servo2_uS = calc_uS(RC_in[1],2);      // Apply the servo rates, direction and sub_trim for servo 2, and convert to a RC pulsewidth (microseconds, uS)
+    servo3_uS = calc_uS(RC_in[2],3);      // Apply the servo rates, direction and sub_trim for servo 3, and convert to a RC pulsewidth (microseconds, uS)
+    servo4_uS = calc_uS(RC_in[3],4);      // Apply the servo rates, direction and sub_trim for servo 4, and convert to a RC pulsewidth (microseconds, uS)
   }
 }
 
@@ -187,27 +193,27 @@ void receiveEvent (int length){
     case 'P':
 
       int message;
+      byte high_byte, low_byte;
 
-      for(i = 4; i > 0; i--){
-        if(i > 1){
-          message |= Wire.read();
-          message <<= i * 8;
-        }else
-          message |= Wire.read();
-      }
+      high_byte = Wire.read();
+      low_byte = Wire.read();
+
+      message = low_byte | (high_byte << 8);
 
       if (message >  90) {
         message = message - 256;
       }
-
-      currentAngle = (float)message;
+      
+      currentAngle = message;
 
       break;
     
     case 'D':
+      byte temp_Byte;
 
-      for(i = 0; i > 3; i++){
-        f_byteArray[i] = Wire.read();
+      for(int i = 0; i < 4; i++){
+        temp_Byte = Wire.read();
+        f_byteArray[i] = temp_Byte;
       }
 
       depth = *(float *)&f_byteArray;
@@ -244,12 +250,13 @@ void printInfo(){
   //Serial.print(sensor.temperature()); 
   //Serial.println(" deg C");
     
-  //Serial.print("Depth: "); 
-  //Serial.print(sensor.depth());
-  //Serial.print(" m");
-  //Serial.print("\t\t\t\t");
-  //Serial.print(currentAngle); 
-  //Serial.println();
+  Serial.print("Depth: "); 
+  Serial.print(depth);
+  Serial.print(" m");
+  Serial.print("\t\t\t");
+  Serial.print("Angle: ");
+  Serial.print(currentAngle); 
+  Serial.println();
     
   //Serial.print("Altitude: "); 
   //Serial.print(sensor.altitude()); 
@@ -258,15 +265,18 @@ void printInfo(){
   // Info regarding servo values from RC controller
 
   //Serial.println();
-  //Serial.print("Servo 1: ");
-  //Serial.println(servo1_uS);
-  //Serial.print("Servo 2: ");
-  //Serial.println(servo2_uS);
-  //Serial.print("Servo 3: ");
-  //Serial.println(servo3_uS);
-  //Serial.print("Servo 4: ");
-  //Serial.println(servo4_uS);
-  //Serial.println();
+  Serial.print("Servo 1: ");
+  Serial.print(servo1_uS);
+  Serial.print("\t\t\t");
+  Serial.print("Servo 2: ");
+  Serial.print(servo2_uS);
+  Serial.print("\t\t\t");
+  Serial.print("Servo 3: ");
+  Serial.print(servo3_uS);
+  Serial.print("\t\t\t");
+  Serial.print("Servo 4: ");
+  Serial.println(servo4_uS);
+  Serial.println();
 
   // Info regarding PID values and motor controll
 

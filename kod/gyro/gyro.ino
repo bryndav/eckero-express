@@ -58,12 +58,13 @@ void loop(){
 void updateSensors(){
     gyroSensor.updateEuler();
     gyroSensor.updateCalibStatus();
+    depthSensor.read();
 }
 
 void readSensors(){
 
-    if(pitch != (int) gyroSensor.readEulerPitch()){
-        pitch = (int) gyroSensor.readEulerPitch();
+    if(pitch != (int) gyroSensor.readEulerRoll()){
+        pitch = (int) gyroSensor.readEulerRoll();
         newValues = true;
     }
 
@@ -75,19 +76,20 @@ void readSensors(){
 
 int sendValues(int tries){
     int returnVal;
+    float temp_Depth;
   
     // Send pitch value
     Wire.beginTransmission(15);
     Wire.write("P");
     Wire.write(highByte (pitch));
     Wire.write(lowByte (pitch));
+    
     returnVal = Wire.endTransmission();
 
     if(returnVal){
       returnVal += 1;
     }
 
-    // Send depth value, converts float to byte array and then transmitts each byte
     float2Bytes(depth, &f_byteArray[0]);
     Wire.beginTransmission(15);
     Wire.write("D");
