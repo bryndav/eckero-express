@@ -148,7 +148,7 @@
  
 // PWM input pins, any of the following pins can be used: digital 0 - 13 or analog A0 - A5 
 
-const int pwmPIN[]={3,4,5,6}; // an array to identify the PWM input pins (the array can be any length) 
+const int pwmPIN[]={2,3,4,5}; // an array to identify the PWM input pins (the array can be any length) 
                                   // first pin is channel 1, second is channel 2...etc
 
 int RC_inputs = 0;                // The number of pins in pwmPIN that are connected to an RC receiver. Addition pins not connected to an RC receiver could be used for any other purpose i.e. detecting the echo pulse on an HC-SR04 ultrasonic distance sensor
@@ -162,9 +162,10 @@ int RC_inputs = 0;                // The number of pins in pwmPIN that are conne
 
 //Graupner 8CH 35MHz 
 //                R,N/S   R,W/E   L,N/S   L,W/E   R=Right N/S=North/South L=Left W/E=West/East
-int RC_min[4] = { 1924,   1924,   1116,   1120};
-int RC_mid[4] = { 1508,   1520,   1528,   1524};
-int RC_max[4] = { 1120,   1112,   1944,   1940};
+//                Ch1     Ch2     Ch3     Ch4
+int RC_min[4] = { 1912,   1924,   1116,   1120};
+int RC_mid[4] = { 1496,   1520,   1528,   1524};
+int RC_max[4] = { 1112,   1112,   1944,   1940};
 
 // fail safe positions
 

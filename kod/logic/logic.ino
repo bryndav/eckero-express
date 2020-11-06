@@ -1,9 +1,12 @@
 /*** Needed libraries ***/
 #include <Wire.h>
 
-#define enA 11 //define PWM input on L298N
-#define enB 10
-
+#define right_motor_pin 11
+#define left_motor_pin 6
+#define front_motor_pin 9
+#define rear_motor_pin 10
+#define in3 13
+#define in4 12
 
 /*** Global variables ***/
 
@@ -16,58 +19,63 @@ float servo_subtrim[] = {0,0,0,0};      // Subtrimrange -1 to +1 (-1 = 1000us, 0
 boolean servo_mix_on = false;
 
 const int channels = 4;                 // Specify the number of receiver channels
-float RC_in[channels];                  // An array to store the calibrated input from receiver 
+float rc_in[channels];                  // An array to store the calibrated input from receiver 
 
-int servo1_uS;                          // Variables to store the pulse widths to be sent to the servo
-int servo2_uS;      
-int servo3_uS;
-int servo4_uS;
+int servo1_us;                          // Variables to store the pulse widths to be sent to the servo
+int servo2_us;      
+int servo3_us;
+int servo4_us;
 
 // Time related variables (timestamps)
 
-unsigned long now;                      // Timing variables to update data at a regular interval                        
+unsigned long now;
 unsigned long rc_update = 0;
-unsigned long last_PID_calc = 0;
+unsigned long last_motor_writing = 0;
 unsigned long last_debug_print = 0;
 int debug_rate = 1000;
+int motor_write_rate = 1000;
 
 //Variables related to operations of the SUV
 
-int right_pump_voltage;
-int left_pump_voltage;
-float set_depth;
-float depth;
-int dive_voltage;
+int right_motor_speed;
+int left_motor_speed;
+int rear_motor_speed;
+int front_motor_speed;
 
-int i;
-int currentAngle = 0;
+float set_depth;
+int depth;
+int angle;
+float heading;
 byte f_byteArray[4];
 
-struct PIDdata{
+struct pidData{
   double control_signal;
-  double setpoint = 0;
-  double Kp = 1; //proportional gain
-  double Ki = 0; //integral gain
-  double Kd = 0; //derivative gain
-  int T = 50; //sample time in milliseconds (ms)
+  int setpoint;
+  double Kp; //proportional gain
+  double Ki; //integral gain
+  double Kd; //derivative gain
+  int T; //sample time in milliseconds (ms)
   unsigned long last_time;
   double total_error;
   double last_error;
-  int max_control = 90;
-  int min_control = -90;
-} PID_balance, PID_dive;
+  int max_control;
+  int min_control;
+};
 
+struct pidData pid_balance = {0.0, 0, 3.0, 0.0, 0.0, 1000, 0, 0.0, 0.0, 90, -90};
+struct pidData pid_dive = {0.0, 0, 3, 0, 0, 1000, 0, 0.0, 0.0, 1000, 0};
 
 void setup() {
-
   Serial.begin(115200);
   Wire.begin(15);                       // Initializes I2C as slave with adress 15
   Wire.onReceive(receiveEvent);         // Connect incoming messages with a function
   
-  //Serial.setTimeout(50);
-  pinMode(enA, OUTPUT);                 // Define outoutpins to controll PWMN input on L298N
-  pinMode(enB, OUTPUT);
+  pinMode(right_motor_pin, OUTPUT);                 // Define outoutpins to controll PWMN input on L298N
+  pinMode(left_motor_pin, OUTPUT);
 
+  pinMode(front_motor_pin, OUTPUT);                 // Define outoutpins to controll PWMN input on L298N
+  pinMode(rear_motor_pin, OUTPUT);
+  
   // Starts the radio controller readings
   setup_pwmRead(); 
 }
@@ -76,46 +84,55 @@ void loop() {
 
   now = millis();
 
-  ///RC TX RX///
   // If RC data is available or 25ms has passed since last update (adjust to > frame rate of receiver)
   if(RC_avail() || now - rc_update > 22){
     readRCInput();
+    calcWantedDepth(&set_depth, servo3_us);
+    rc_update = now;
   }
 
   //PID controller signals//
-  if (now - PID_balance.last_time >= PID_balance.T){
-    PID_balance = PID_Control(PID_balance, currentAngle);     // Calls the PID function every T interval and outputs a control signal   
+  if (now - pid_balance.last_time >= pid_balance.T){
+    pid_balance = pidControl(pid_balance, angle);
   }
 
-  if (now - PID_dive.last_time >= PID_dive.T){
-    PID_dive = PID_Control(PID_dive, depth);
+  if (now - pid_dive.last_time >= pid_dive.T){
+    pid_dive.setpoint = set_depth;
+    pid_dive = pidControl(pid_dive, depth);
   }
 
+  // Calculate and write motor signals
+  if(now - last_motor_writing > motor_write_rate){
+    dive(&rear_motor_speed, &front_motor_speed, set_depth); 
+    balance(&rear_motor_speed, &front_motor_speed, pid_balance.control_signal);
+    steering(&right_motor_speed, &left_motor_speed);
+    last_motor_writing = now;
+  }
+
+  // System debug prints
   if(now - last_debug_print > debug_rate){
-    last_debug_print = now;
     printInfo();  
+    last_debug_print = now;
   }
-  
 }
 
 void readRCInput(){
-   
-  rc_update = now;                           
+                              
   //print_RCpwm();                        // Uncommment to print raw data from receiver to serial
   
   for (int i = 0; i < channels; i++){     // Run through each RC channel
     int CH = i+1;
     
-    RC_in[i] = RC_decode(CH);             // Decode receiver channel and apply failsafe
+    rc_in[i] = RC_decode(CH);             // Decode receiver channel and apply failsafe
     
-    //print_decimal2percentage(RC_in[i]); // Uncomment to print calibrated receiver input (+-100%) to serial       
+    //print_decimal2percentage(rc_in[i]); // Uncomment to print calibrated receiver input (+-100%) to serial       
     //Serial.println();  
   }
                                  
   if (servo_mix_on == true){              // MIXING ON
     
-    float mix1 = RC_in[0] - RC_in[1];     // Channel 1 (ELV) - Channel 2 (AIL)
-    float mix2 = RC_in[0] + RC_in[1];     // Channel 1 (ELV) + Channel 2 (AIL)
+    float mix1 = rc_in[0] - rc_in[1];     // Channel 1 (ELV) - Channel 2 (AIL)
+    float mix2 = rc_in[0] + rc_in[1];     // Channel 1 (ELV) + Channel 2 (AIL)
 
     if(mix1 > 1){
       mix1 = 1;                           // Limit mixer output to +-1
@@ -131,19 +148,33 @@ void readRCInput(){
     }
 
     // Calculate the pulse widths for the servos
-    servo1_uS = calc_uS(mix1, 1);         // Apply the servo rates, direction and sub_trim for servo 1, and convert to a RC pulsewidth (microseconds, uS)
-    servo2_uS = calc_uS(mix2, 2);         // Apply the servo rates, direction and sub_trim for servo 2, and convert to a RC pulsewidth (microseconds, uS)          
+    servo1_us = calc_uS(mix1, 1);         // Apply the servo rates, direction and sub_trim for servo 1, and convert to a RC pulsewidth (microseconds, uS)
+    servo2_us = calc_uS(mix2, 2);         // Apply the servo rates, direction and sub_trim for servo 2, and convert to a RC pulsewidth (microseconds, uS)          
     }
     else{                                 // MIXING OFF
-    servo1_uS = calc_uS(RC_in[0],1);      // Apply the servo rates, direction and sub_trim for servo 1, and convert to a RC pulsewidth (microseconds, uS)
-    servo2_uS = calc_uS(RC_in[1],2);      // Apply the servo rates, direction and sub_trim for servo 2, and convert to a RC pulsewidth (microseconds, uS)
-    servo3_uS = calc_uS(RC_in[2],3);      // Apply the servo rates, direction and sub_trim for servo 3, and convert to a RC pulsewidth (microseconds, uS)
-    servo4_uS = calc_uS(RC_in[3],4);      // Apply the servo rates, direction and sub_trim for servo 4, and convert to a RC pulsewidth (microseconds, uS)
+    servo1_us = calc_uS(rc_in[0],1);      // Apply the servo rates, direction and sub_trim for servo 1, and convert to a RC pulsewidth (microseconds, uS)
+    servo2_us = calc_uS(rc_in[1],2);      // Apply the servo rates, direction and sub_trim for servo 2, and convert to a RC pulsewidth (microseconds, uS)
+    servo3_us = calc_uS(rc_in[2],3);      // Apply the servo rates, direction and sub_trim for servo 3, and convert to a RC pulsewidth (microseconds, uS)
+    servo4_us = calc_uS(rc_in[3],4);      // Apply the servo rates, direction and sub_trim for servo 4, and convert to a RC pulsewidth (microseconds, uS)
   }
 }
 
-struct PIDdata PID_Control(struct PIDdata data, float input){
-  struct PIDdata temp = data;
+void calcWantedDepth(float* set_depth, int servo_input){
+
+  // Scale away fluctuating values
+  if(servo_input < 1000){
+    servo_input = 1000;
+  }
+
+  if(servo_input > 2000){
+    servo_input = 2000;
+  }
+
+  *set_depth = map(servo_input, 2000, 1000, 0, 1000);  
+}
+
+struct pidData pidControl(struct pidData data, int input){
+  struct pidData temp = data;
 
   double error = temp.setpoint - input;
   temp.total_error += error;                                       // Accumalates the error - integral term
@@ -185,13 +216,13 @@ int calc_uS(float cmd, int servo){                                // cmd = comma
 }
 
 void receiveEvent (int length){
-  char dataType;
+  char data_type;
+  byte temp_byte;
 
-  dataType = Wire.read();
+  data_type = Wire.read();
 
-  switch(dataType) {
+  switch(data_type) {
     case 'P':
-
       int message;
       byte high_byte, low_byte;
 
@@ -203,29 +234,38 @@ void receiveEvent (int length){
       if (message >  90) {
         message = message - 256;
       }
-      
-      currentAngle = message;
+      angle = message;
 
       break;
     
     case 'D':
-      byte temp_Byte;
-
+      float temp_depth;
+      
       for(int i = 0; i < 4; i++){
-        temp_Byte = Wire.read();
-        f_byteArray[i] = temp_Byte;
+        temp_byte = Wire.read();
+        f_byteArray[i] = temp_byte;
       }
 
-      depth = *(float *)&f_byteArray;
+      temp_depth = *(float *)&f_byteArray;
+      depth = (int) (temp_depth * 100);
+
+      break;
+
+    case 'H':
+      for(int i = 0; i < 4; i++){
+        temp_byte = Wire.read();
+        f_byteArray[i] = temp_byte;
+      }
+
+      heading = *(float *)&f_byteArray;
 
       break;
 
     default:
-      
       byte val;
     
       Serial.print("Wrong value recieved: ");
-      Serial.print(dataType);
+      Serial.print(data_type);
 
       while (Wire.available() > 0){
         val = Wire.read();
@@ -235,6 +275,55 @@ void receiveEvent (int length){
 
   while (Wire.available() > 0){
     Wire.read();  
+  }
+}
+
+void steering(int* left_motor_speed, int* right_motor_speed){
+  int x, y, z;
+  
+  if (servo1_us < 1500) {
+    servo1_us = 1500;
+  }
+  
+  y = map(servo1_us, 1500, 2000, 0, 255);
+  x = map(servo2_us, 1500, 1000, 0, 255);
+  z = abs(x) + y;
+  
+  if (z > 255) {
+    z = 255;
+  }
+  
+  if (x < 0) {
+    *left_motor_speed = z;
+    *right_motor_speed == 0;
+  }else{
+    *right_motor_speed = z;
+    *left_motor_speed == 0;
+  }
+}
+
+void dive(int* rear_motor_speed, int* front_motor_speed, int wanted_depth){
+  int motor_speed;
+
+  motor_speed = map(pid_dive.control_signal, 0, 1000, 0, 255);
+  *rear_motor_speed = motor_speed;
+  *front_motor_speed = motor_speed;
+}
+
+void balance(int* rear_motor_speed, int* front_motor_speed, double control_signal){
+  double reduce = control_signal;
+  int balance_reduction;
+
+  if(control_signal < 0){
+    reduce = control_signal * -1;
+  }
+ 
+  balance_reduction = map(reduce, 0, 90, 0, 128);
+
+  if(control_signal < 0){
+    *rear_motor_speed = *rear_motor_speed - balance_reduction;
+  }else{
+    *front_motor_speed = *front_motor_speed - balance_reduction;
   }
 }
 
@@ -255,7 +344,13 @@ void printInfo(){
   Serial.print(" m");
   Serial.print("\t\t\t");
   Serial.print("Angle: ");
-  Serial.print(currentAngle); 
+  Serial.print(angle); 
+  Serial.print("\t\t\t");
+  Serial.print("Rear motor speed: ");
+  Serial.print(rear_motor_speed); 
+  Serial.print("\t\t\t");
+  Serial.print("Front motor speed: ");
+  Serial.print(front_motor_speed);
   Serial.println();
     
   //Serial.print("Altitude: "); 
@@ -265,27 +360,20 @@ void printInfo(){
   // Info regarding servo values from RC controller
 
   //Serial.println();
-  Serial.print("Servo 1: ");
-  Serial.print(servo1_uS);
-  Serial.print("\t\t\t");
-  Serial.print("Servo 2: ");
-  Serial.print(servo2_uS);
-  Serial.print("\t\t\t");
-  Serial.print("Servo 3: ");
-  Serial.print(servo3_uS);
-  Serial.print("\t\t\t");
-  Serial.print("Servo 4: ");
-  Serial.println(servo4_uS);
-  Serial.println();
-
-  // Info regarding PID values and motor controll
-
-  //Serial.println(sensed_output);
-  //Serial.println(control_signal);
-  //Serial.print("\t");
-  //Serial.println(right_pump_voltage);
-  //Serial.print("\t");
-  //Serial.println(left_pump_voltage);
-  //Serial.println(servo1_uS);
-  //Serial.print(rollAngle);
+  //Serial.print("Servo 1: ");
+  //Serial.print(servo1_us);
+  //Serial.print(rc_in[0]);
+  //Serial.print("\t\t\t");
+  //Serial.print("Servo 2: ");
+  //Serial.print(servo2_us);
+  //Serial.print(rc_in[1]);
+  //Serial.print("\t\t\t");
+  //Serial.print("Servo 3: ");
+  //Serial.print(servo3_us);
+  //Serial.print(rc_in[2]);
+  //Serial.print("\t\t\t");
+  //Serial.print("Servo 4: ");
+  //Serial.println(servo4_us);
+  //Serial.print(rc_in[3]);
+  //Serial.println();
 }
