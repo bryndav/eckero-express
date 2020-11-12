@@ -15,10 +15,9 @@ const int sampelPeriod = 20;
 const int transmissionPeriod = 100;
 
 int pitch = 0;
-int roll = 0;
+float heading = 0.0;
 float depth = 0.0;
 
-bool newValues = false;
 int returnCode;
 byte f_byteArray[4];
 
@@ -45,12 +44,11 @@ void loop(){
     if((now - lastSampel) >= sampelPeriod){
         lastSampel = now;
         updateSensors();
-        readSensors();
+        readSensors(&pitch, &depth, &heading);
     }
 
-    if(newValues || now - lastTransmission > transmissionPeriod){
-      returnCode = sendValues(0);
-      newValues = false;
+    if(now - lastTransmission > transmissionPeriod){
+      returnCode = sendValues();
     }
     
 }
@@ -61,20 +59,24 @@ void updateSensors(){
     depthSensor.read();
 }
 
-void readSensors(){
+void readSensors(int* pitch, float* depth, float* heading){
 
-    if(pitch != (int) gyroSensor.readEulerRoll()){
-        pitch = (int) gyroSensor.readEulerRoll();
-        newValues = true;
+    if(*pitch != (int) gyroSensor.readEulerRoll()){
+        *pitch = (int) gyroSensor.readEulerRoll();
+
     }
 
-    if(depth != depthSensor.depth()){
-      depth = depthSensor.depth();
-      newValues = true;
+    if(*depth != depthSensor.depth()){
+      *depth = depthSensor.depth();
     }
+
+    if(*heading != gyroSensor.readEulerHeading()){
+      *heading = gyroSensor.readEulerHeading();
+    }
+
 }
 
-int sendValues(int tries){
+int sendValues(){
     int returnVal;
     float temp_Depth;
   
@@ -82,14 +84,14 @@ int sendValues(int tries){
     Wire.beginTransmission(15);
     Wire.write("P");
     Wire.write(highByte (pitch));
-    Wire.write(lowByte (pitch));
-    
+    Wire.write(lowByte (pitch));    
     returnVal = Wire.endTransmission();
 
     if(returnVal){
       returnVal += 1;
     }
 
+    // Send depth value
     float2Bytes(depth, &f_byteArray[0]);
     Wire.beginTransmission(15);
     Wire.write("D");
@@ -98,11 +100,16 @@ int sendValues(int tries){
     }
     returnVal = Wire.endTransmission();
 
-    // Retry sending of data
-    if(returnVal){
-      returnVal +=1 ;
+    // Send heading value
+    float2Bytes(heading, &f_byteArray[0]);
+    Wire.beginTransmission(15);
+    Wire.write("H");
+    for(int i = 0; i < sizeof(f_byteArray); i++){
+      Wire.write(f_byteArray[i]);
     }
-    
+    returnVal = Wire.endTransmission();
+
+
     return returnVal;
 }
 
@@ -112,6 +119,7 @@ void float2Bytes(float val, byte* bytes_array){
     float float_variable;
     byte temp_array[4];
   } u;
+  
   // Overite bytes of union with float variable
   u.float_variable = val;
   // Assign bytes to input array
