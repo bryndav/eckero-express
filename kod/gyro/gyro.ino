@@ -63,6 +63,7 @@ void readSensors(int* pitch, float* depth, float* heading){
 
     if(*pitch != (int) gyroSensor.readEulerRoll()){
         *pitch = (int) gyroSensor.readEulerRoll();
+
     }
 
     if(*depth != depthSensor.depth()){
@@ -77,6 +78,7 @@ void readSensors(int* pitch, float* depth, float* heading){
 
 int sendValues(){
     int returnVal;
+    float temp_Depth;
   
     // Send pitch value
     Wire.beginTransmission(15);
@@ -84,6 +86,10 @@ int sendValues(){
     Wire.write(highByte (pitch));
     Wire.write(lowByte (pitch));    
     returnVal = Wire.endTransmission();
+
+    if(returnVal){
+      returnVal += 1;
+    }
 
     // Send depth value
     float2Bytes(depth, &f_byteArray[0]);

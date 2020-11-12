@@ -35,6 +35,7 @@ unsigned long last_debug_print = 0;
 int debug_rate = 1000;
 int motor_write_rate = 1000;
 
+
 //Variables related to operations of the SUV
 
 int right_motor_speed;
@@ -46,6 +47,7 @@ float set_depth;
 int depth;
 int angle;
 float heading;
+
 byte f_byteArray[4];
 
 struct pidData{
@@ -239,6 +241,7 @@ void receiveEvent (int length){
       break;
     
     case 'D':
+
       float temp_depth;
       
       for(int i = 0; i < 4; i++){

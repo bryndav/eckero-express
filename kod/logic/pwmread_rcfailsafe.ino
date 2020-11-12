@@ -148,6 +148,7 @@
  
 // PWM input pins, any of the following pins can be used: digital 0 - 13 or analog A0 - A5 
 
+
 const int pwmPIN[]={2,3,4,5}; // an array to identify the PWM input pins (the array can be any length) 
                                   // first pin is channel 1, second is channel 2...etc
 
