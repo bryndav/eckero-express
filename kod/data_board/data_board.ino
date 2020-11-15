@@ -18,6 +18,10 @@ int pitch = 0;
 float heading = 0.0;
 float depth = 0.0;
 
+char pitch_id = 'P';
+char heading_id = 'H';
+char depth_id = 'D';
+
 const int fresh_water = 997;
 
 void 
@@ -52,9 +56,9 @@ loop ()
   }
 
   if (now - lastTransmission > transmissionPeriod){
-    return_code = sendInt ("P", &pitch);
-    return_code = sendFloat ("D", &depth);
-    return_code = sendFloat ("H", &heading);
+    return_code = sendInt (pitch_id, &pitch);
+    return_code = sendFloat (depth_id, &depth);
+    return_code = sendFloat (heading_id, &heading);
   }
 }
 
