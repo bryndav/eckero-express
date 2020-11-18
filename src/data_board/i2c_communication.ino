@@ -3,7 +3,7 @@
 const byte slave_address = 15;
 
 int 
-sendInt (char   identifier,
+sendInt (byte   identifier,
          int*   value)
 {
   int returnVal;
@@ -18,7 +18,7 @@ sendInt (char   identifier,
 }
 
 int
-sendFloat(char    identifier,
+sendFloat(byte    identifier,
           float*  value)
 {
   byte f_byteArray[4];

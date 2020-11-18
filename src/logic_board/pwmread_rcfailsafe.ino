@@ -490,3 +490,71 @@ float PWM_duty(){
   duty = pin_pwm/pin_period;
   return duty;
 }
+
+void 
+readRCInput (const int  channels,
+             float*     rc_in,
+             int*       servo_us)
+{                
+  //print_RCpwm();                        // Uncommment to print raw data from receiver to serial
+  
+  for (int i = 0; i < channels; i++) {     // Run through each RC channel
+    int CH = i+1;
+    
+    rc_in[i] = RC_decode(CH);             // Decode receiver channel and apply failsafe
+    
+    //print_decimal2percentage(rc_in[i]); // Uncomment to print calibrated receiver input (+-100%) to serial       
+    //Serial.println();  
+  }
+                                 
+  if (servo_mix_on)
+  {                
+    float mix1 = rc_in[0] - rc_in[1];     // Channel 1 (ELV) - Channel 2 (AIL)
+    float mix2 = rc_in[0] + rc_in[1];     // Channel 1 (ELV) + Channel 2 (AIL)
+
+    if(mix1 > 1) {
+      mix1 = 1;
+    } else if (mix1 < -1) {
+      mix1 = -1;
+    }
+
+    if (mix2 > 1) {
+      mix2 = 1;
+    }
+    else if (mix2 < -1) {
+      mix2 = -1;  
+    }
+
+      // Calculate the pulse widths for the servos
+      servo_us[0] = calc_uS (mix1, 1);        // Apply the servo rates, direction and sub_trim for servo 1, and convert to a RC pulsewidth (microseconds, uS)
+      servo_us[1] = calc_uS (mix2, 2);        // Apply the servo rates, direction and sub_trim for servo 2, and convert to a RC pulsewidth (microseconds, uS)          
+    }else 
+    {
+      servo_us[0] = calc_uS (rc_in[0],1);      // Apply the servo rates, direction and sub_trim for servo 1, and convert to a RC pulsewidth (microseconds, uS)
+      servo_us[1] = calc_uS (rc_in[1],2);      // Apply the servo rates, direction and sub_trim for servo 2, and convert to a RC pulsewidth (microseconds, uS)
+      servo_us[2] = calc_uS (rc_in[2],3);      // Apply the servo rates, direction and sub_trim for servo 3, and convert to a RC pulsewidth (microseconds, uS)
+      servo_us[3] = calc_uS (rc_in[3],4);      // Apply the servo rates, direction and sub_trim for servo 4, and convert to a RC pulsewidth (microseconds, uS)
+  }
+}
+
+int 
+calc_uS (float  cmd, 
+         int    servo)
+{                                                                 // cmd = commanded position +- 100%
+  int i = servo - 1;                                              // servo = servo num (to apply correct direction, rates and trim)
+  float dir;
+  
+  if (servo_dir[i] == 0){
+    dir = -1;                                                     // set the direction of servo travel
+  } else {
+    dir = 1;
+  }
+
+  // Apply servo rates and sub trim, then convert to a uS value
+  cmd = 1500 + (cmd * servo_rates[i] * dir + servo_subtrim [i]) * 500;   
+
+  if (cmd > 2500) cmd = 2500;                                      // limit pulsewidth to the range 500 to 2500us
+  else if (cmd < 500) cmd = 500;
+
+  return cmd;
+}
