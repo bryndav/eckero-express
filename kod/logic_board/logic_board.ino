@@ -2,13 +2,9 @@
 #include <Wire.h>
 
 #define right_motor_pin 11
-#define left_motor_pin 6
+#define left_motor_pin 10
 #define front_motor_pin 9
-#define rear_motor_pin 10
-#define left_motor_enable_pin 0
-#define right_motor_enable_pin 1
-#define rear_motor_enable_pin 7
-#define front_motor_enable_pin 8
+#define rear_motor_pin 6
 
 /*** Global variables ***/
 
@@ -35,7 +31,7 @@ unsigned long rc_update = 0;
 unsigned long last_motor_writing = 0;
 unsigned long last_debug_print = 0;
 int debug_rate = 1000;
-int motor_write_rate = 1000;
+int motor_write_rate = 100;
 
 //Variables related to operations of the SUV
 
@@ -378,31 +374,27 @@ setMotorSpeed (int*   left_motor_speed,
                int*   front_motor_speed){
 
   if (*right_motor_speed > 15){
-    digitalWrite (right_motor_enable_pin, HIGH);
-    analogWrite (right_motor_pin, *right_motor_speed);
+    analogWrite (left_motor_pin, *right_motor_speed);
   }else{
-    digitalWrite (right_motor_enable_pin, LOW);
+    analogWrite (left_motor_pin, 0);
   }
 
   if (*left_motor_speed > 15){
-    digitalWrite (left_motor_enable_pin, HIGH);
-    analogWrite (left_motor_pin, *right_motor_speed);
+    analogWrite (right_motor_pin, *left_motor_speed);
   }else{
-    digitalWrite (left_motor_enable_pin, LOW);
+    analogWrite (right_motor_pin, 0);
   }
 
   if (*front_motor_speed > 15){
-    digitalWrite (front_motor_enable_pin, HIGH);
-    analogWrite (front_motor_pin, *right_motor_speed);
+    analogWrite (front_motor_pin, *front_motor_speed);
   }else{
-    digitalWrite (front_motor_enable_pin, LOW);
+    analogWrite (front_motor_pin, 0);
   }
     
   if (*rear_motor_speed > 15){
-    digitalWrite (rear_motor_enable_pin, HIGH);
-    analogWrite (rear_motor_pin, *right_motor_speed);
+    analogWrite (rear_motor_pin, *rear_motor_speed);
   }else{
-    digitalWrite (rear_motor_enable_pin, LOW);
+    analogWrite (rear_motor_pin, 0);
   }
 }
 
