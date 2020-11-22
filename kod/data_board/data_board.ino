@@ -15,8 +15,10 @@ const int sampelPeriod = 20;
 const int transmissionPeriod = 100;
 
 int pitch = 0;
+int pitch_offset = 0;
 float heading = 0.0;
 float depth = 0.0;
+float depth_offset = 0.0;
 
 char pitch_id = 'P';
 char heading_id = 'H';
@@ -76,10 +78,10 @@ readSensors (int*     pitch,
              float*   heading)
 {
   if (*pitch != (int) gyroSensor.readEulerRoll ())
-      *pitch = (int) gyroSensor.readEulerRoll ();
+      *pitch = (int) gyroSensor.readEulerRoll () - pitch_offset;
 
   if (*depth != depthSensor.depth ())
-    *depth = depthSensor.depth ();
+    *depth = depthSensor.depth () - depth_offset;
 
   if (*heading != gyroSensor.readEulerHeading ())
     *heading = gyroSensor.readEulerHeading ();
