@@ -3,6 +3,8 @@
 #include "NineAxesMotion.h"
 #include "MS5837.h"
 
+#define batteryPin A0
+
 /*** Object initialization ***/
 NineAxesMotion gyroSensor;
 MS5837 depthSensor;
@@ -19,6 +21,7 @@ int pitch_offset = 0;
 float heading = 0.0;
 float depth = 0.0;
 float depth_offset = 0.0;
+float voltage_level = 0.0;
 
 char pitch_id = 'P';
 char heading_id = 'H';
@@ -54,7 +57,7 @@ loop ()
   if ((now - lastSampel) >= sampelPeriod) {
       lastSampel = now;
       updateSensors ();
-      readSensors (&pitch, &depth, &heading);
+      readSensors (&pitch, &depth, &heading, &voltage_level);
   }
 
   if (now - lastTransmission > transmissionPeriod){
@@ -75,8 +78,12 @@ updateSensors ()
 void
 readSensors (int*     pitch, 
              float*   depth, 
-             float*   heading)
+             float*   heading,
+             float*   voltage_level)
 {
+  int battery_level = analogRead(batteryPin);
+  *voltage_level = battery_level * (5.0 / 1023.0); // multiply with 11.02 ???
+  
   if (*pitch != (int) gyroSensor.readEulerRoll ())
       *pitch = (int) gyroSensor.readEulerRoll () - pitch_offset;
 
