@@ -83,13 +83,19 @@ setup ()
   
   // Starts the radio controller readings
   setup_pwmRead (); 
+
+  left_motor_speed = 0;
+  right_motor_speed = 0;
+    
+  rear_motor_speed = 200;
+  front_motor_speed = 200;
 }
 
 void 
 loop() 
 {
   now = millis ();
-
+  /*
   // If RC data is available or 25ms has passed since last update (adjust to > frame rate of receiver)
   if (RC_avail() || now - rc_update > 22){
     readRCInput ();
@@ -104,18 +110,14 @@ loop()
     pid_dive = pidControl (pid_dive, depth);
   }
 
+  */
+
   // Calculate and write motor signals
   if (now - last_motor_writing > motor_write_rate){
     //dive (&rear_motor_speed, &front_motor_speed); 
     //balance (&rear_motor_speed, &front_motor_speed, pid_balance.control_signal);
     //steering (&right_motor_speed, &left_motor_speed);
-
-    left_motor_speed = 0;
-    right_motor_speed = 0;
     
-    rear_motor_speed = 51;
-    front_motor_speed = 51;
-
     setMotorSpeed (&left_motor_speed, &right_motor_speed, &rear_motor_speed, &front_motor_speed);
     
     last_motor_writing = now;
@@ -123,7 +125,7 @@ loop()
 
   // System debug prints
   if (now - last_debug_print > debug_rate){
-    //printInfo ();  
+    printInfo ();  
     last_debug_print = now;
   }
 }
