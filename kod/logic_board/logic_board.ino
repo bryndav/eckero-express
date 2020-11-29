@@ -2,8 +2,8 @@
 #include <Wire.h>
 
 #define right_motor_pin 11
-#define left_motor_pin 10
-#define front_motor_pin 9
+#define left_motor_pin 9
+#define front_motor_pin 10
 #define rear_motor_pin 6
 
 /*** Global variables ***/
@@ -72,8 +72,8 @@ void
 setup () 
 {
   Serial.begin (115200);
-  //Wire.begin (i2c_address);
-  //Wire.onReceive (receiveEvent);
+  Wire.begin (i2c_address);
+  Wire.onReceive (receiveEvent);
     
   pinMode (right_motor_pin, OUTPUT);
   pinMode (left_motor_pin, OUTPUT);
@@ -82,21 +82,14 @@ setup ()
   pinMode (rear_motor_pin, OUTPUT);
   
   // Starts the radio controller readings
-  //setup_pwmRead (); 
-
-  left_motor_speed = 0;
-  right_motor_speed = 0;
-    
-  rear_motor_speed = 220;
-  front_motor_speed = 220;
-  setMotorSpeed (&left_motor_speed, &right_motor_speed, &rear_motor_speed, &front_motor_speed);
+  setup_pwmRead (); 
 }
 
 void 
 loop() 
 {
   now = millis ();
-  /*
+
   // If RC data is available or 25ms has passed since last update (adjust to > frame rate of receiver)
   if (RC_avail() || now - rc_update > 22){
     readRCInput ();
@@ -111,18 +104,16 @@ loop()
     pid_dive = pidControl (pid_dive, depth);
   }
 
-
   // Calculate and write motor signals
   if (now - last_motor_writing > motor_write_rate){
-    //dive (&rear_motor_speed, &front_motor_speed); 
-    //balance (&rear_motor_speed, &front_motor_speed, pid_balance.control_signal);
-    //steering (&right_motor_speed, &left_motor_speed);
+    dive (&rear_motor_speed, &front_motor_speed); 
+    balance (&rear_motor_speed, &front_motor_speed, pid_balance.control_signal);
+    steering (&right_motor_speed, &left_motor_speed);
     
     setMotorSpeed (&left_motor_speed, &right_motor_speed, &rear_motor_speed, &front_motor_speed);
     
     last_motor_writing = now;
   }
- */
  
   // System debug prints
   if (now - last_debug_print > debug_rate){

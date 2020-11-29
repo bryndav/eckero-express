@@ -1,6 +1,6 @@
 #define right_motor_pin 11
-#define left_motor_pin 10
-#define front_motor_pin 9
+#define left_motor_pin 9
+#define front_motor_pin 10
 #define rear_motor_pin 6
 
 int left_motor_speed;
