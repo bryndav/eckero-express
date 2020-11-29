@@ -117,7 +117,7 @@ loop()
  
   // System debug prints
   if (now - last_debug_print > debug_rate){
-    //printInfo ();  
+    printInfo ();  
     last_debug_print = now;
   }
 }
@@ -267,14 +267,7 @@ receiveEvent (int length)
       }
 
       temp_depth = *(float *)&f_byteArray;
-      Serial.println();
-      Serial.print("Incoming raw depth value: ");
-      Serial.print(temp_depth, 6);
-      depth = ((int) (temp_depth * 100) - 46);
-      Serial.print("\t\t\t");
-      Serial.print("Translated depth: ");
-      Serial.println(depth);
-      
+      depth = ((int) (temp_depth * 1000) - 460);
       break;
 
     case 'H':
