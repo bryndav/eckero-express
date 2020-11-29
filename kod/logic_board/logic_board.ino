@@ -31,7 +31,7 @@ unsigned long rc_update = 0;
 unsigned long last_motor_writing = 0;
 unsigned long last_debug_print = 0;
 int debug_rate = 1000;
-int motor_write_rate = 100;
+int motor_write_rate = 1000;
 
 //Variables related to operations of the SUV
 
@@ -72,8 +72,8 @@ void
 setup () 
 {
   Serial.begin (115200);
-  Wire.begin (i2c_address);
-  Wire.onReceive (receiveEvent);
+  //Wire.begin (i2c_address);
+  //Wire.onReceive (receiveEvent);
     
   pinMode (right_motor_pin, OUTPUT);
   pinMode (left_motor_pin, OUTPUT);
@@ -82,13 +82,14 @@ setup ()
   pinMode (rear_motor_pin, OUTPUT);
   
   // Starts the radio controller readings
-  setup_pwmRead (); 
+  //setup_pwmRead (); 
 
   left_motor_speed = 0;
   right_motor_speed = 0;
     
-  rear_motor_speed = 200;
-  front_motor_speed = 200;
+  rear_motor_speed = 220;
+  front_motor_speed = 220;
+  setMotorSpeed (&left_motor_speed, &right_motor_speed, &rear_motor_speed, &front_motor_speed);
 }
 
 void 
@@ -110,7 +111,6 @@ loop()
     pid_dive = pidControl (pid_dive, depth);
   }
 
-  */
 
   // Calculate and write motor signals
   if (now - last_motor_writing > motor_write_rate){
@@ -122,7 +122,8 @@ loop()
     
     last_motor_writing = now;
   }
-
+ */
+ 
   // System debug prints
   if (now - last_debug_print > debug_rate){
     printInfo ();  
@@ -394,22 +395,14 @@ setMotorSpeed (int*   left_motor_speed,
   }
 
   if (*front_motor_speed > 15){
-    Serial.print("Setting front motor to: ");
-    Serial.println(*front_motor_speed);
     analogWrite (front_motor_pin, *front_motor_speed);
   }else{
-    Serial.print("Setting front motor to: ");
-    Serial.println(*front_motor_speed);
     analogWrite (front_motor_pin, 0);
   }
     
   if (*rear_motor_speed > 15){
-    Serial.print("Setting rear motor to: ");
-    Serial.println(*rear_motor_speed);
     analogWrite (rear_motor_pin, *rear_motor_speed);
   }else{
-    Serial.print("Setting rear motor to: ");
-    Serial.println(*rear_motor_speed);
     analogWrite (rear_motor_pin, 0);
   }
 }
