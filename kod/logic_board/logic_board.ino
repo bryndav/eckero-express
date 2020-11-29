@@ -394,14 +394,22 @@ setMotorSpeed (int*   left_motor_speed,
   }
 
   if (*front_motor_speed > 15){
+    Serial.print("Setting front motor to: ");
+    Serial.println(*front_motor_speed);
     analogWrite (front_motor_pin, *front_motor_speed);
   }else{
+    Serial.print("Setting front motor to: ");
+    Serial.println(*front_motor_speed);
     analogWrite (front_motor_pin, 0);
   }
     
   if (*rear_motor_speed > 15){
+    Serial.print("Setting rear motor to: ");
+    Serial.println(*rear_motor_speed);
     analogWrite (rear_motor_pin, *rear_motor_speed);
   }else{
+    Serial.print("Setting rear motor to: ");
+    Serial.println(*rear_motor_speed);
     analogWrite (rear_motor_pin, 0);
   }
 }
