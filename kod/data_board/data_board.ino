@@ -20,7 +20,7 @@ int pitch = 0;
 int pitch_offset = 0;
 float heading = 0.0;
 float depth = 0.0;
-float depth_offset = 0.0;
+float depth_offset = 46.0;
 float voltage_level = 0.0;
 
 char pitch_id = 'P';
@@ -85,10 +85,10 @@ readSensors (int*     pitch,
   *voltage_level = battery_level * (5.0 / 1023.0); // multiply with 11.02 ???
   
   if (*pitch != (int) gyroSensor.readEulerRoll ())
-      *pitch = (int) gyroSensor.readEulerRoll () - pitch_offset;
+      *pitch = ((int) gyroSensor.readEulerRoll () - pitch_offset);
 
   if (*depth != depthSensor.depth ())
-    *depth = depthSensor.depth () - depth_offset;
+    *depth = (depthSensor.depth () - depth_offset);
 
   if (*heading != gyroSensor.readEulerHeading ())
     *heading = gyroSensor.readEulerHeading ();

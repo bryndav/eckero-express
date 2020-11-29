@@ -267,7 +267,7 @@ receiveEvent (int length)
       }
 
       temp_depth = *(float *)&f_byteArray;
-      depth = (int) (temp_depth * 100);
+      depth = ((int) (temp_depth * 100) - 46);
 
       break;
 
