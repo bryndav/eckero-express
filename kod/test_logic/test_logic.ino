@@ -25,10 +25,10 @@ setup ()
   rear_motor_speed = 220;
   front_motor_speed = 220;
 
-  analogWrite (left_motor_pin, *right_motor_speed);
-  analogWrite (right_motor_pin, *right_motor_speed);
-  analogWrite (rear_motor_pin, *right_motor_speed);
-  analogWrite (front_motor_pin, *right_motor_speed);
+  analogWrite (left_motor_pin, left_motor_speed);
+  analogWrite (right_motor_pin, right_motor_speed);
+  analogWrite (rear_motor_pin, rear_motor_speed);
+  analogWrite (front_motor_pin, front_motor_speed);
 }
 
 
