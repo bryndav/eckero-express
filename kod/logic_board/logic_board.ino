@@ -66,7 +66,7 @@ struct pidData {
 
 int pid_calc_rate = 100;
 struct pidData pid_balance = {0, 0.0, 0.0, 3.0, 0.0, 0.0, pid_calc_rate, 0, 0.0, 90, -90};
-struct pidData pid_dive = {0, 0.0, 0.0, 3.0, 0.0, 0.0, pid_calc_rate, 0, 0.0, 1000, 0};
+struct pidData pid_dive = {set_depth, 0.0, 0.0, 2.0, 0.0, 0.0, pid_calc_rate, 0, 0.0, 1000, 0};
 
 void
 setup () 
@@ -89,26 +89,27 @@ void
 loop() 
 {
   now = millis ();
-
+  /*
   // If RC data is available or 25ms has passed since last update (adjust to > frame rate of receiver)
   if (RC_avail() || now - rc_update > 22){
     readRCInput ();
     calcWantedDepth (&set_depth, servo3_us);
     rc_update = now;
   }
-
+  */
+  
   //PID controller signals//
   if (now - pid_balance.last_time >= pid_calc_rate){
-    pid_balance = pidControl (pid_balance, angle);
-    pid_dive.setpoint = set_depth;
+    //pid_balance = pidControl (pid_balance, angle);
+    //pid_dive.setpoint = set_depth;
     pid_dive = pidControl (pid_dive, depth);
   }
 
   // Calculate and write motor signals
   if (now - last_motor_writing > motor_write_rate){
     dive (&rear_motor_speed, &front_motor_speed); 
-    balance (&rear_motor_speed, &front_motor_speed, pid_balance.control_signal);
-    steering (&right_motor_speed, &left_motor_speed);
+    //balance (&rear_motor_speed, &front_motor_speed, pid_balance.control_signal);
+    //steering (&right_motor_speed, &left_motor_speed);
     
     setMotorSpeed (&left_motor_speed, &right_motor_speed, &rear_motor_speed, &front_motor_speed);
     
@@ -341,7 +342,7 @@ dive (int*  rear_motor_speed,
   int motor_speed;
 
   //TODO increase mapping lower value in order to just make the boat not sink
-  motor_speed = map (pid_dive.control_signal, 0, 1000, 0, 255);
+  motor_speed = map (pid_dive.control_signal, 0, 1000, 190, 255);
   *rear_motor_speed = motor_speed;
   *front_motor_speed = motor_speed;
 }
