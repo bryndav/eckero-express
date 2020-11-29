@@ -40,7 +40,7 @@ int left_motor_speed;
 int rear_motor_speed;
 int front_motor_speed;
 
-float set_depth;
+float set_depth = 100;
 int depth;
 int angle;
 float heading;
@@ -106,9 +106,15 @@ loop()
 
   // Calculate and write motor signals
   if (now - last_motor_writing > motor_write_rate){
-    dive (&rear_motor_speed, &front_motor_speed); 
-    balance (&rear_motor_speed, &front_motor_speed, pid_balance.control_signal);
-    steering (&right_motor_speed, &left_motor_speed);
+    //dive (&rear_motor_speed, &front_motor_speed); 
+    //balance (&rear_motor_speed, &front_motor_speed, pid_balance.control_signal);
+    //steering (&right_motor_speed, &left_motor_speed);
+
+    left_motor_speed = 0;
+    right_motor_speed = 0;
+    
+    rear_motor_speed = 51;
+    front_motor_speed = 51;
 
     setMotorSpeed (&left_motor_speed, &right_motor_speed, &rear_motor_speed, &front_motor_speed);
     
