@@ -64,13 +64,13 @@ loop ()
       current_speed = calcVelocity(current_speed, acceleration);
       distance_traveled = calcDistance(distance_traveled, current_speed, acceleration);
   }
-
+  /*
   if (now - lastTransmission > transmissionPeriod){
     return_code = sendInt (pitch_id, &pitch);
     return_code = sendFloat (depth_id, &depth);
     return_code = sendFloat (heading_id, &heading);
   }
-
+  */
   if ((now - lastDebugPrint) >= debugTime) {
     Serial.print("Distance traveled: ");
     Serial.println(distance_traveled);
