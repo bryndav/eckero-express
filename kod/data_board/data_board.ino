@@ -13,12 +13,17 @@ unsigned long lastSampel = 0;
 unsigned long lastTransmission = 0;
 const int sampelPeriod = 20;
 const int transmissionPeriod = 100;
+unsigned long lastDebugPrint = 0;
 
 int pitch = 0;
 int pitch_offset = 0;
 float heading = 0.0;
 float depth = 0.0;
 float depth_offset = 0.0;
+float acceleration = 0.0;
+float current_speed = 0.0;
+
+float distance_traveled = 0.0;
 
 char pitch_id = 'P';
 char heading_id = 'H';
@@ -48,19 +53,28 @@ void
 loop ()
 {
   int return_code;
+  const int debugTime = 1000;
   
   now = millis ();
 
   if ((now - lastSampel) >= sampelPeriod) {
       lastSampel = now;
       updateSensors ();
-      readSensors (&pitch, &depth, &heading);
+      readSensors (&pitch, &depth, &heading, &acceleration);
+      current_speed = calcVelocity(current_speed, acceleration);
+      distance_traveled = calcDistance(distance_traveled, current_speed, acceleration);
   }
 
   if (now - lastTransmission > transmissionPeriod){
     return_code = sendInt (pitch_id, &pitch);
     return_code = sendFloat (depth_id, &depth);
     return_code = sendFloat (heading_id, &heading);
+  }
+
+  if ((now - lastDebugPrint) >= debugTime) {
+    Serial.print("Distance traveled: ");
+    Serial.println(distance_traveled);
+    lastDebugPrint = now;
   }
 }
 
@@ -75,8 +89,11 @@ updateSensors ()
 void
 readSensors (int*     pitch, 
              float*   depth, 
-             float*   heading)
+             float*   heading,
+             float*   acceleration)
 {
+  *acceleration = gyroSensor.readAccelerometer(X_AXIS);
+  
   if (*pitch != (int) gyroSensor.readEulerRoll ())
       *pitch = (int) gyroSensor.readEulerRoll () - pitch_offset;
 
@@ -85,4 +102,29 @@ readSensors (int*     pitch,
 
   if (*heading != gyroSensor.readEulerHeading ())
     *heading = gyroSensor.readEulerHeading ();
+}
+
+float
+calcVelocity (float prev_velocity,
+              float acceleration)
+{
+  float return_val;
+  float samplePeriod = 0.0020;
+
+  return_val = prev_velocity + (acceleration * samplePeriod);
+
+  return return_val;
+}
+
+float
+calcDistance (float prev_distance,
+              float current_speed,
+              float acceleration)
+{
+  float return_val;
+  float samplePeriod = 0.0020;
+
+  return_val = prev_distance + (current_speed * samplePeriod) + 0,5 * (acceleration * (samplePeriod * samplePeriod));
+
+  return return_val;
 }
