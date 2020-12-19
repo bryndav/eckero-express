@@ -1,19 +1,19 @@
-# Operation: Eckerö
-Projectdokumentation och kod till operation Eckerö projektet. En autonom liten båt som ska färdas mellan Stockholm till Eckerö (Åland).
+# Ålen AUV
+Projectdocumentation and code for the Ålen project. A autonomous underwater vehicel that will travel around Rotholmen (Stockholm).
 
-Att göra lista 2020-11-22:
+TODO 2020-12-13:
 
-	Komma i vattnet
-	* Reda ut vilken motor som är fram och bak
-	* Ta bort enable kablage, fixa jord arduino -> arduino
-	* Genomföringar USB-kabel + front_motor
-	* Fixa pumpmunstycken
-	* Kåpa USB-kontakt 
-
-	Bra att göra
-	* Set angle funktionalitet
-	* Debugga städad kod
-	* Skapa funktion för batterispänning
-	* Printa motorfästen
-	* Filter fästen
-
+	Investigate
+	* Calculate distance between GPS points
+	* Calculate bearing between GPS points
+	* What units are use in haversine formula and bearing calculation
+	
+	* Programing environment for ROS
+	* Code structure to be used in repository with ROS
+	* Virtual machine or docker components for Windows
+	
+	Hardware
+	* Connect motor controllers
+	* Connect DC-converter
+	* Buy and install Raspberry PI
+	* Buy and connect two new pumps for navigation
