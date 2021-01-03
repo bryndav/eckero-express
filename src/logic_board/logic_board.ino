@@ -23,13 +23,11 @@ float rc_in[channels];
 int servo_us[channels];
 
 // Timestamps
-
 unsigned long rc_update = 0;
 unsigned long last_motor_writing = 0;
 unsigned long last_debug_print = 0;
 
 //Variables related to operations of the SUV
-
 int right_motor_speed;
 int left_motor_speed;
 int rear_motor_speed;
@@ -55,7 +53,6 @@ setup ()
     
   pinMode (RIGHT_MOTOR_PIN, OUTPUT);
   pinMode (LEFT_MOTOR_PIN, OUTPUT);
-
   pinMode (FRONT_MOTOR_PIN, OUTPUT);
   pinMode (REAR_MOTOR_PIN, OUTPUT);
   
@@ -68,15 +65,13 @@ loop()
 {
   const int debug_rate = 1000;
   const int motor_write_rate = 1000;
-  
   unsigned long now = millis ();
 
   // If RC data is available or 25ms has passed since last update (adjust to > frame rate of receiver)
   if (RC_avail() || now - rc_update > 22){
     readRCInput (channels, rc_in, servo_us);
-    
-    calcWantedDepth (&set_depth, servo_us[2]);
-    pid_dive.setpoint = set_depth;
+    //calcWantedDepth (&set_depth, servo_us[2]);
+    //pid_dive.setpoint = set_depth;
     
     rc_update = now;
   }
@@ -101,17 +96,15 @@ loop()
     last_motor_writing = now;
   }
 
-  // System debug prints
   if (now - last_debug_print > debug_rate){
-    //printInfo ();  
+    debugPrint();  
     last_debug_print = now;
   }
 }
 
 void 
-printInfo ()
+debugPrint ()
 { 
-    
   Serial.print("Depth: "); 
   Serial.print(depth);
   Serial.print(" mm");

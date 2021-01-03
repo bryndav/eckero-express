@@ -14,13 +14,19 @@ readSensors (int*     pitch,
              float*   temperature,
              float*   acceleration)
 {
-  *pitch = (int) gyroSensor.readEulerRoll ();
+  float temp_depth = 0.0;
+  
+  *pitch = (int) gyroSensor.readEulerPitch ();
   *heading = gyroSensor.readEulerHeading ();
   *acceleration = gyroSensor.readAccelerometer(X_AXIS);
 
   *pressure = (int) depthSensor.pressure ();
   *temperature = depthSensor.temperature ();
-  *depth = (int) depthSensor.depth ();
+
+  // Converts depth into mm stored as a int
+  temp_depth = depthSensor.depth ();
+  temp_depth = temp_depth * 1000;
+  *depth = (int) temp_depth;
 }
 
 int
@@ -29,7 +35,7 @@ correctDepth(int     depth,
 {
   int return_val;
   
-  return_val = (depth * 1000) - depth_offset;
+  return_val = depth - depth_offset;
   return_val = (return_val > 0) ? return_val : 0;
 
   return return_val;

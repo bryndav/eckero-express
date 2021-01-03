@@ -16,10 +16,11 @@ MS5837 depthSensor;
 /*** Global variables ***/
 unsigned long last_sampel = 0;
 unsigned long last_transmission = 0;
+unsigned long last_debug_print = 0;
 
 int pitch = 0;
 int pressure = 0;
-int depth = 0.0;
+int depth = 0;
 float heading = 0.0;
 float temperature = 0.0;
 float acceleration = 0.0;
@@ -54,6 +55,7 @@ loop ()
   int return_code;
   const int sampel_period = 20;
   const int transmission_period = 100;
+  const int debug_period = 1000;
   unsigned long now = millis ();
 
   if ((now - last_sampel) >= sampel_period) {
@@ -71,4 +73,29 @@ loop ()
     return_code = sendFloat (HEADING_TRANS, &heading);
     last_transmission = now;
   }
+
+  if (now - last_debug_print > debug_period) {
+    debugPrint();
+    last_debug_print = now;
+  }
+}
+
+void
+debugPrint()
+{
+  Serial.print("Milliseconds since startup: ");
+  Serial.println(now);
+  Serial.print("Depth: ");
+  Serial.print(depth);
+  Serial.print("\t\t\t");
+  Serial.print("Pitch: ");
+  Serial.print(pitch);
+  Serial.print("\t\t\t");
+  Serial.print("Heading: ");
+  Serial.print(heading);
+  Serial.print("\t\t\t");
+  Serial.print("Temprature: ");
+  Serial.print(temperature);
+  Serial.println();
+  Serial.println();
 }
