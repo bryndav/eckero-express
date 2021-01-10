@@ -45,24 +45,15 @@ receiveEvent (int length)
     case PITCH_TRANS:
       angle = readInt ();
 
-      Serial.print("New angle: ");
-      Serial.println(angle);
-
       break;
     
     case DEPTH_TRANS:
       depth = readInt ();
-
-      //Serial.print("New depth: ");
-      //Serial.println(depth);
-
+      
       break;
 
     case HEADING_TRANS:
       heading = readFloat ();
-
-      //Serial.print("New heading: ");
-      //Serial.println(heading);
 
       break;
 
