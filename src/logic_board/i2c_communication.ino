@@ -6,11 +6,6 @@ readInt ()
   int output;
   byte high_byte, low_byte;
 
-  while (Wire.available() > 0) {
-    byte val = Wire.read ();
-    Serial.println (val);
-  }
-
   Serial.println();
   Serial.print("High byte: ");
   high_byte = Wire.read ();
@@ -49,6 +44,13 @@ receiveEvent (int length)
 {
   byte trans_type;
 
+
+  while (Wire.available() > 0) {
+    byte val = Wire.read ();
+    Serial.println (val);
+  }
+
+/*
   trans_type = Wire.read ();
 
   switch (trans_type) 
@@ -88,6 +90,7 @@ receiveEvent (int length)
         Serial.println (val);
       }
   }
+*/
 
   Serial.println();
 }
