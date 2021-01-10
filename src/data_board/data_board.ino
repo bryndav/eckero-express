@@ -71,13 +71,15 @@ loop ()
   if (now - last_transmission > transmission_period){
     Serial.print("Sending pitch: ");
     return_code = sendInt (PITCH_TRANS, &pitch);
+    Serial.print("Sending depth: ");
     return_code = sendInt (DEPTH_TRANS, &depth);
+    Serial.print("Sending heading: ");
     return_code = sendFloat (HEADING_TRANS, &heading);
     last_transmission = now;
   }
 
   if (now - last_debug_print > debug_period) {
-    debugPrint();
+    //debugPrint();
     last_debug_print = now;
   }
 }
