@@ -23,7 +23,7 @@ void printPosition();
 struct Position currPos = {" ", 0.0, 'F', 0.0, 'F', 0, 0, 0.0, 0.0, false};
 
 void setup() {
-  	gps_serial.begin(9600);
+	gps_serial.begin(9600);
 	Serial.begin(9600);
 }
 
@@ -40,19 +40,19 @@ void loop() {
 }
 
 struct Position getPos(){
-	char NMEA[88];
+	char NMEA[88] = "";
 	char GPRMC[88];
 	struct Position tmpPos = {" ", 0.0, 'F', 0.0, 'F', 0, 0, 0.0, 0.0, false};
 	int index;
 	char work[12];
 	char *comp;
-
+  
 	// Grab GPGGA message containing most relavant position data
 	if (gps_serial.find("$GPGGA,")){
 		index = gps_serial.readBytesUntil(0x0D, NMEA, 88);
     
 		// Uncomment to see raw serial string
-		//Serial.println(NMEA);
+		Serial.println(NMEA);
 	}
 
 	// Grab GPRMC message containing the bearing in true north format
@@ -127,16 +127,16 @@ struct Position getPos(){
 }
 
 float degreeConversion(char* nmea){
-  	float conversion = 0.0;
+	float conversion = 0.0;
 	float deg = 0.0;
 	float decimals = 0.0;
 	int p = 1;
-  	int i = 0;
+	int i = 0;
 
-  	// Skip starting 0 in longitude
-  	if (strlen(nmea) > 10){
-  		i++;
-  	}
+	// Skip starting 0 in longitude
+	if (strlen(nmea) > 10){
+		i++;
+	}
 
 	// Conversion from hours, mins format into degrees
 	for(i; i < strlen(nmea); i++){

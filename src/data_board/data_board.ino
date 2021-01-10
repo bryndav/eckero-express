@@ -14,7 +14,7 @@ SoftwareSerial gps_serial(GPS_RX_PIN, GPS_TX_PIN);
 MS5837 depthSensor;
 
 /*** Global variables ***/
-unsigned long last_sampel = 0;
+unsigned long last_sample = 0;
 unsigned long last_transmission = 0;
 unsigned long last_debug_print = 0;
 
@@ -53,18 +53,18 @@ void
 loop ()
 {
   int return_code;
-  const int sampel_period = 20;
+  const int sample_period = 20;
   const int transmission_period = 100;
   const int debug_period = 1000;
   unsigned long now = millis ();
 
-  if ((now - last_sampel) >= sampel_period) {
+  if ((now - last_sample) >= sample_period) {
       updateSensors ();
       readSensors (&pitch, &pressure, &depth, &heading, &temperature, &acceleration);
       depth = correctDepth(depth, depth_offset);
       current_speed = calcVelocity(current_speed, acceleration);
       distance_traveled = calcDistance(distance_traveled, current_speed, acceleration);
-      last_sampel = now;
+      last_sample = now;
   }
 
   if (now - last_transmission > transmission_period){
@@ -94,7 +94,7 @@ debugPrint()
   Serial.print("Heading: ");
   Serial.print(heading);
   Serial.print("\t\t\t");
-  Serial.print("Temprature: ");
+  Serial.print("Temperature: ");
   Serial.print(temperature);
   Serial.println();
   Serial.println();

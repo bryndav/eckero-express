@@ -40,6 +40,9 @@ receiveEvent (int length)
 
   trans_type = Wire.read ();
 
+  Serial.print("Recieved: ");
+  Serial.println(trans_type);
+
   switch (trans_type) 
   {
     case PITCH_TRANS:
