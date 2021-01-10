@@ -68,6 +68,4 @@ receiveEvent (int length)
         Serial.println (val);
       }
   }
-
-  Serial.println();
 }
