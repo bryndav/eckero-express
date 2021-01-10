@@ -99,7 +99,7 @@ loop()
   }
 
   if (now - last_debug_print > debug_rate){
-    //debugPrint();  
+    debugPrint();  
     last_debug_print = now;
   }
 }
@@ -113,6 +113,9 @@ debugPrint ()
   Serial.print("\t\t\t");
   Serial.print("Angle: ");
   Serial.print(angle); 
+  Serial.print("\t\t\t");
+  Serial.print("Heading: ");
+  Serial.print(heading); 
   Serial.print("\t\t\t");
   Serial.print("Rear motor speed: ");
   Serial.print(rear_motor_speed); 
