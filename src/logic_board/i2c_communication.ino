@@ -6,6 +6,11 @@ readInt ()
   int output;
   byte high_byte, low_byte;
 
+  while (Wire.available() > 0) {
+    byte val = Wire.read ();
+    Serial.println (val);
+  }
+
   Serial.println();
   Serial.print("High byte: ");
   high_byte = Wire.read ();
@@ -13,7 +18,7 @@ readInt ()
   Serial.print("Low byte: ");
   low_byte = Wire.read ();
   Serial.println(low_byte);
-  Seria.println();
+  Serial.println();
 
   output = low_byte | (high_byte << 8);
 
