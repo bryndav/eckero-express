@@ -8,6 +8,8 @@ sendInt (byte   identifier,
 {
   int returnVal;
 
+  Serial.println(*value);
+
   Wire.beginTransmission (slave_address);
   Wire.write (identifier);
   Wire.write (highByte (*value));
@@ -24,6 +26,8 @@ sendFloat(byte    identifier,
   byte f_byteArray[4];
   float temp_Depth;
   int return_val;
+
+  Serial.println(*value);
   
   float2Bytes (*value, &f_byteArray[0]);
   Wire.beginTransmission (slave_address);
