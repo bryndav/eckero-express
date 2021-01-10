@@ -57,7 +57,7 @@ setup ()
   pinMode (REAR_MOTOR_PIN, OUTPUT);
   
   // Starts the radio controller readings
-  setup_pwmRead (); 
+  //setup_pwmRead (); 
 }
 
 void 
