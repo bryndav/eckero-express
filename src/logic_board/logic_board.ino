@@ -67,6 +67,7 @@ loop()
   const int motor_write_rate = 1000;
   unsigned long now = millis ();
 
+  /*
   // If RC data is available or 25ms has passed since last update (adjust to > frame rate of receiver)
   if (RC_avail() || now - rc_update > 22){
     readRCInput (channels, rc_in, servo_us);
@@ -75,6 +76,7 @@ loop()
     
     rc_update = now;
   }
+  */
 
   //PID controller signals//
   if (now - pid_balance.last_time >= pid_calc_rate){
