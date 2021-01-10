@@ -6,8 +6,14 @@ readInt ()
   int output;
   byte high_byte, low_byte;
 
+  Serial.println();
+  Serial.print("High byte: ");
   high_byte = Wire.read ();
+  Serial.println(high_byte);
+  Serial.print("Low byte: ");
   low_byte = Wire.read ();
+  Serial.println(low_byte);
+  Seria.println();
 
   output = low_byte | (high_byte << 8);
 
@@ -53,16 +59,16 @@ receiveEvent (int length)
     case DEPTH_TRANS:
       depth = readInt ();
 
-      Serial.print("New depth: ");
-      Serial.println(depth);
+      //Serial.print("New depth: ");
+      //Serial.println(depth);
 
       break;
 
     case HEADING_TRANS:
       heading = readFloat ();
 
-      Serial.print("New heading: ");
-      Serial.println(heading);
+      //Serial.print("New heading: ");
+      //Serial.println(heading);
 
       break;
 

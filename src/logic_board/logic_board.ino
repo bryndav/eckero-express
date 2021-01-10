@@ -50,12 +50,12 @@ setup ()
   Serial.begin (115200);
   Wire.begin (i2c_address);
   Wire.onReceive (receiveEvent);
-    
+
   pinMode (RIGHT_MOTOR_PIN, OUTPUT);
   pinMode (LEFT_MOTOR_PIN, OUTPUT);
   pinMode (FRONT_MOTOR_PIN, OUTPUT);
   pinMode (REAR_MOTOR_PIN, OUTPUT);
-  
+
   // Starts the radio controller readings
   //setup_pwmRead (); 
 }
@@ -94,7 +94,7 @@ loop()
     setMotorSpeed (LEFT_MOTOR_PIN, left_motor_speed);
     setMotorSpeed (REAR_MOTOR_PIN, rear_motor_speed);
     setMotorSpeed (FRONT_MOTOR_PIN, front_motor_speed);
-
+    
     last_motor_writing = now;
   }
 

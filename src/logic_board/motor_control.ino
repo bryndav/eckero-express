@@ -102,5 +102,6 @@ void
 setMotorSpeed (int   motor_pin,  
                int   motor_speed)
 {
-  (motor_speed > 15) ? analogWrite (motor_pin, motor_speed) : analogWrite (motor_pin, 0);
+  //(motor_speed > 15) ? analogWrite (motor_pin, motor_speed) : analogWrite (motor_pin, 0);
+  (motor_speed > 15) ? analogWrite (motor_pin, 0) : analogWrite (motor_pin, 0);
 }
