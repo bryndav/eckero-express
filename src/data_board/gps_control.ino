@@ -3,63 +3,63 @@
 Position 
 getPos ()
 {
-  char NMEA[88];
-  char GPRMC[88];
-  Position tmpPos = {" ", 0.0, 'F', 0.0, 'F', 0, 0, 0.0, 0.0, false};
+  char nmea[88];
+  char gprmc[88];
+  Position tmp_pos = {" ", 0.0, 'F', 0.0, 'F', 0, 0, 0.0, 0.0, false};
   int index;
   char work[12];
   char *comp;
 
   // Grab GPGGA message containing most relavant position data
-  if (gps_serial.find("$GPGGA,")){
-    index = gps_serial.readBytesUntil(0x0D, NMEA, 88);
+  if (gpsSerial.find("$GPGGA,")){
+    index = gpsSerial.readBytesUntil(0x0D, nmea, 88);
     
     // Uncomment to see raw serial string
-    //Serial.println(NMEA);
+    //Serial.println(nmea);
   }
 
-  // Grab GPRMC message containing the bearing in true north format
-  if (gps_serial.find("$GPRMC,")){
-    gps_serial.readBytesUntil(0x0D, GPRMC, 88);
+  // Grab gprmc message containing the bearing in true north format
+  if (gpsSerial.find("$gprmc,")){
+    gpsSerial.readBytesUntil(0x0D, gprmc, 88);
 
     // Uncomment to see raw serial string
-    //Serial.println(GPRMC);
+    //Serial.println(gprmc);
   }
 
   if (index < 60) {
-    return tmpPos;
+    return tmp_pos;
   }
 
-  comp = strtok(NMEA, ",");
+  comp = strtok(nmea, ",");
 
   // Store UTC time in struct
-  strcpy(tmpPos.UTCtime, comp);
+  strcpy(tmp_pos.utc_time, comp);
 
   // Store latitude
   comp = strtok(NULL, ","); 
   strcpy(work, comp); 
-  tmpPos.latitude = degreeConversion(work);
+  tmp_pos.latitude = degreeConversion(work);
 
   // Store N or S in direction
   comp = strtok(NULL, ","); 
-  tmpPos.latitudeDir = *comp; 
+  tmp_pos.latitude_dir = *comp; 
 
   // Store longitude
   comp = strtok(NULL, ","); 
   strcpy(work, comp); 
-  tmpPos.longitude = degreeConversion(work);  
+  tmp_pos.longitude = degreeConversion(work);  
 
   // Store E or W in direction
   comp = strtok(NULL, ","); 
-  tmpPos.longitudeDir = *comp;
+  tmp_pos.longitude_dir = *comp;
 
   // Store message quality
   comp = strtok(NULL, ",");
-  tmpPos.quality = atoi(comp);
+  tmp_pos.quality = atoi(comp);
 
   // Store number of satellites
   comp = strtok(NULL, ",");
-  tmpPos.numSats= atoi(comp);
+  tmp_pos.num_sats= atoi(comp);
 
   // Skip to mean sea level
   strtok(NULL, ",");
@@ -68,24 +68,27 @@ getPos ()
 
   // Store mean sea level
   comp = strtok(NULL, ",");
-  tmpPos.altitude = (float) atof(comp);
+  tmp_pos.altitude = (float) atof(comp);
 
   // Store bearing
-  comp = strtok(GPRMC, ",");
+  comp = strtok(gprmc, ",");
 
   // Skip information until bearing
   for (int i = 0; i < 7; i++){
     comp = strtok(NULL, ",");
   }
 
-  return tmpPos;  
+  // Check position quality
+  tmp_pos.valid = validateQuality(tmp_pos.quality, tmp_pos.num_sats);
+
+  return tmp_pos;
 }
 
 bool
 validateQuality (int quality,
-                 int num_satelites)
+                 int num_sats)
 {
-  return (quality >= 1 && num_satelites >= 3);  
+  return (quality >= 1 && num_sats >= 5);  
 }
 
 float 
@@ -129,29 +132,29 @@ newCoordinates (float longitude,
                 float old_long,
                 float old_lat)
 {
-    bool new_value = false;
-    float diff = 0.0;
-    float coordinateOffset = 0.000005;
+  bool new_value = false;
+  float diff = 0.0;
+  float coordinate_offset = 0.000005;
 
-    diff = old_long - longitude;
+  diff = old_long - longitude;
 
-    if (diff < 0.0){
-      diff = diff * -1.0;
-    }
+  if (diff < 0.0){
+    diff = diff * -1.0;
+  }
 
-    if (diff > coordinateOffset){
-      new_value = true;
-    }
+  if (diff > coordinate_offset){
+    new_value = true;
+  }
 
-    diff = old_lat - latitude;
+  diff = old_lat - latitude;
 
-    if (diff < 0.0){
-      diff = diff * -1.0;
-    }
-  
-    if (diff > coordinateOffset){
-      new_value = true;
-    }
+  if (diff < 0.0){
+    diff = diff * -1.0;
+  }
 
-    return new_value;
+  if (diff > coordinate_offset){
+    new_value = true;
+  }
+
+  return new_value;
 }

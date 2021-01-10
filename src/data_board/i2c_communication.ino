@@ -37,6 +37,18 @@ sendFloat(byte    identifier,
   return return_val;
 }
 
+int
+sendByte(byte identifier)
+{
+  int return_val;
+
+  Wire.beginTransmission (slave_address);
+  Wire.write (identifier);
+  return_val = Wire.endTransmission ();
+
+  return return_val;
+}
+
 void 
 float2Bytes (float  val, 
              byte*  bytes_array) 
@@ -48,4 +60,29 @@ float2Bytes (float  val,
     
   u.float_variable = val;
   memcpy (bytes_array, u.temp_array, 4);
+}
+
+void
+receiveEvent (int length)
+{
+  byte trans_type;
+
+  trans_type = Wire.read ();
+
+  switch (trans_type)
+  {
+    case GPS_REQ:
+      gps_requested = true;
+
+  default:
+    byte val;
+  
+    Serial.print ("Wrong value recieved: ");
+    Serial.print (trans_type);
+
+    while (Wire.available() > 0) {
+      val = Wire.read ();
+      Serial.println (val);
+    }
+  }
 }

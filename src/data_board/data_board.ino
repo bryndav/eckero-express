@@ -10,7 +10,7 @@
 
 /*** Object initialization ***/
 NineAxesMotion gyroSensor;
-SoftwareSerial gps_serial(GPS_RX_PIN, GPS_TX_PIN);
+SoftwareSerial gpsSerial(GPS_RX_PIN, GPS_TX_PIN);
 MS5837 depthSensor;
 
 /*** Global variables ***/
@@ -24,18 +24,20 @@ float heading = 0.0;
 float temperature = 0.0;
 float acceleration = 0.0;
 float current_speed = 0.0;
-
 int depth_offset = 540;
 float distance_traveled = 0.0;
+bool gps_requested = false;
 
 void 
 setup ()
 {
+  const int i2c_address = 20;
   const int fresh_water = 997;
   
   Serial.begin (115200);
   I2C.begin ();
-  Wire.begin ();
+  Wire.begin (i2c_address);
+  Wire.onReceive (receiveEvent);
   
   gyroSensor.initSensor ();
   gyroSensor.setOperationMode (OPERATION_MODE_NDOF);
@@ -54,6 +56,7 @@ loop ()
   int return_code;
   const int sampel_period = 20;
   const int transmission_period = 100;
+  const unsigned int position_timeout = 120000;
   unsigned long now = millis ();
 
   if ((now - last_sampel) >= sampel_period) {
@@ -70,5 +73,26 @@ loop ()
     return_code = sendInt (DEPTH_TRANS, &depth);
     return_code = sendFloat (HEADING_TRANS, &heading);
     last_transmission = now;
+  }
+
+  if (gps_requested){
+    unsigned long req_time_stamp = now;
+    Position curr_pos = {" ", 0.0, 'F', 0.0, 'F', 0, 0, 0.0, 0.0, false};
+
+    // Wait for a valid position
+    while (curr_pos.valid == false && (now - req_time_stamp >= position_timeout)){
+      curr_pos = getPos();
+      now = millis();
+    }
+
+    // Send position if available
+    if (curr_pos.valid){
+      return_code = sendFloat(LONG_TRANS, &curr_pos.longitude);
+      return_code = sendFloat(LAT_TRANS, &curr_pos.latitude);
+    } else {
+      return_code = sendByte(GPS_UNAVAILABLE);
+    }
+
+    gps_requested = false;
   }
 }
