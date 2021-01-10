@@ -97,7 +97,7 @@ loop()
   }
 
   if (now - last_debug_print > debug_rate){
-    debugPrint();  
+    //debugPrint();  
     last_debug_print = now;
   }
 }
