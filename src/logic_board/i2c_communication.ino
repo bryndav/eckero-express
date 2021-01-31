@@ -36,6 +36,8 @@ readFloat ()
 void 
 receiveEvent (int length)
 {
+  float f_float_converter = 0.0;
+  int i_float_converter = 0;
   byte trans_type;
 
   trans_type = Wire.read ();
@@ -48,7 +50,11 @@ receiveEvent (int length)
       break;
     
     case DEPTH_TRANS:
-      depth = readInt ();
+      i_float_converter = readInt ();
+      f_float_converter = i_float_converter / 100; 
+      f_float_converter = round(f_float_converter);
+
+      depth = (int) f_float_converter;
 
       break;
 

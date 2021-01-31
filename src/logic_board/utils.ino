@@ -8,5 +8,5 @@ calcWantedDepth (float*   set_depth,
   if (servo_input > 2000)
     servo_input = 2000;
 
-  *set_depth = map (servo_input, 2000, 1000, 0, 1000);  
+  *set_depth = map (servo_input, 2000, 1000, 0, 10);  
 }

@@ -13,7 +13,7 @@
 
 //Variables related to radio transmitter
 
-const boolean servo_dir[] = {0,0,0,0};
+const boolean servo_dir[] = {0,0,1,0};
 const float servo_rates[] = {1,1,1,1};
 const float servo_subtrim[] = {0,0,0,0};
 const boolean servo_mix_on = false;
@@ -33,14 +33,15 @@ int left_motor_speed;
 int rear_motor_speed;
 int front_motor_speed;
 
+const int depth_idle = 90;
 float set_depth;
 int depth;
 int angle;
 float heading;
 
 const int pid_calc_rate = 100;
-pidData pid_balance = {0, 0.0, 0.0, 3.0, 0.0, 0.0, pid_calc_rate, 0, 0.0, 90, -90};
-pidData pid_dive = {0, 0.0, 0.0, 3.0, 0.0, 0.0, pid_calc_rate, 0, 0.0, 1000, 0};
+pidData pid_balance = {0, 0.0, 0.0, 30.0, 0.0, 0.0, pid_calc_rate, 0, 0.0, 90, -90};
+pidData pid_dive = {10, 0.0, 0.0, 30.0, 0.0, 0.0, pid_calc_rate, 0, 0.0, 255, -255};
 
 void
 setup () 
@@ -84,7 +85,7 @@ loop()
 
   // Calculate and write motor signals
   if (now - last_motor_writing > motor_write_rate){
-    getDiveOutput (&rear_motor_speed, &front_motor_speed, pid_dive.control_signal); 
+    getDiveOutput (&rear_motor_speed, &front_motor_speed, pid_dive.setpoint, pid_dive.control_signal); 
     getBalanceReduction (&rear_motor_speed, &front_motor_speed, pid_balance.control_signal);
     getSteeringOutput (rc_in[0], rc_in[1], &right_motor_speed, &left_motor_speed);
 
@@ -107,33 +108,43 @@ debugPrint ()
 { 
   Serial.print("Depth: "); 
   Serial.print(depth);
-  Serial.print(" mm");
-  Serial.print("\t\t\t");
+  Serial.print(" dm");
+  Serial.print("\t\t");
   Serial.print("Angle: ");
   Serial.print(angle); 
-  Serial.print("\t\t\t");
+  Serial.print("\t\t");
+  Serial.print("Heading: ");
+  Serial.print(heading); 
+  Serial.print("\t\t");
+  Serial.print("Set depth: ");
+  Serial.print(pid_dive.setpoint); 
+  Serial.print("\t\t");
   Serial.print("Rear motor speed: ");
   Serial.print(rear_motor_speed); 
-  Serial.print("\t\t\t");
+  Serial.print("\t\t");
   Serial.print("Front motor speed: ");
   Serial.print(front_motor_speed);
-  Serial.println();
+  Serial.print("\t\t");
+  Serial.print("Control signal: ");
+  Serial.print(pid_dive.control_signal);
   
-  //Serial.println();
-  //Serial.print("Servo 1: ");
-  //Serial.print(servo_us[0]);
-  //Serial.print(rc_in[0]);
-  //Serial.print("\t\t\t");
-  //Serial.print("Servo 2: ");
-  //Serial.print(servo_us[1]);
-  //Serial.print(rc_in[1]);
-  //Serial.print("\t\t\t");
-  //Serial.print("Servo 3: ");
-  //Serial.print(servo_us[2]);
-  //Serial.print(rc_in[2]);
-  //Serial.print("\t\t\t");
-  //Serial.print("Servo 4: ");
-  //Serial.println(servo_us[3]);
-  //Serial.print(rc_in[3]);
-  //Serial.println();
+  Serial.println();
+  Serial.println();
+//  Serial.print("Servo 1: ");
+//  Serial.print(servo_us[0]);
+//  //Serial.print(rc_in[0]);
+//  Serial.print("\t\t\t");
+//  Serial.print("Servo 2: ");
+//  Serial.print(servo_us[1]);
+//  //Serial.print(rc_in[1]);
+//  Serial.print("\t\t\t");
+//  Serial.print("Servo 3: ");
+//  Serial.print(servo_us[2]);
+//  //Serial.print(rc_in[2]);
+//  Serial.print("\t\t\t");
+//  Serial.print("Servo 4: ");
+//  Serial.println(servo_us[3]);
+//  //Serial.print(rc_in[3]);
+//  Serial.println();
+//  Serial.println();
 }
