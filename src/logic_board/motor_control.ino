@@ -9,7 +9,7 @@ pidControl (pidData       data,
 
   double error = temp.setpoint - input;
   temp.total_error += error;                                       // Accumalates the error - integral term
-  
+
   if (temp.total_error >= temp.max_control) {
     temp.total_error = temp.max_control;
   }else if (temp.total_error <= temp.min_control) { 
@@ -68,12 +68,22 @@ getSteeringOutput (float  rc_in_one,
 void 
 getDiveOutput (int*  rear_motor_speed, 
                int*  front_motor_speed,
+               int   set_point,
                int   control_signal)
 {
   int motor_speed;
 
-  //TODO increase mapping lower value in order to just make the boat not sink
-  motor_speed = map ((int) control_signal, 0, 1000, 190, 255);
+  if (set_point <= 2)
+    motor_speed = 0;
+  else if (control_signal < 0)
+    motor_speed = map(control_signal, 0, -255, depth_idle, 0);
+  else{
+    motor_speed = depth_idle + control_signal;
+
+    if (motor_speed > 255)
+      motor_speed = 255;
+  }
+
   *rear_motor_speed = motor_speed;
   *front_motor_speed = motor_speed;
 }
@@ -102,5 +112,7 @@ void
 setMotorSpeed (int   motor_pin,  
                int   motor_speed)
 {
+
+  
   (motor_speed > 15) ? analogWrite (motor_pin, motor_speed) : analogWrite (motor_pin, 0);
 }
