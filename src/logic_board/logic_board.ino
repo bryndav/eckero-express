@@ -4,15 +4,18 @@
 
 /*** Defenitions ***/
 
-#define RIGHT_MOTOR_PIN 11
-#define LEFT_MOTOR_PIN 9
-#define FRONT_MOTOR_PIN 10
-#define REAR_MOTOR_PIN 6
+#define RIGHT_MOTOR_PIN 6
+#define LEFT_MOTOR_PIN 10
+#define FRONT_MOTOR_PIN 9
+#define REAR_MOTOR_PIN 11
+#define RIGHT_MOTOR_DIR 7
+#define LEFT_MOTOR_DIR 8
+#define FRONT_MOTOR_DIR 13
+#define REAR_MOTOR_DIR 12
 
 /*** Global variables ***/
 
 //Variables related to radio transmitter
-
 const boolean servo_dir[] = {0,0,1,0};
 const float servo_rates[] = {1,1,1,1};
 const float servo_subtrim[] = {0,0,0,0};
@@ -33,14 +36,14 @@ int left_motor_speed;
 int rear_motor_speed;
 int front_motor_speed;
 
-const int depth_idle = 90;
+const int motor_idle_speed = 90;
 float set_depth;
 int depth;
 int angle;
 float heading;
 
 const int pid_calc_rate = 100;
-pidData pid_balance = {0, 0.0, 0.0, 30.0, 0.0, 0.0, pid_calc_rate, 0, 0.0, 90, -90};
+pidData pid_balance = {0, 0.0, 0.0, 3.0, 0.0, 0.0, pid_calc_rate, 0, 0.0, 90, -90};
 pidData pid_dive = {10, 0.0, 0.0, 30.0, 0.0, 0.0, pid_calc_rate, 0, 0.0, 255, -255};
 
 void
@@ -56,7 +59,16 @@ setup ()
   pinMode (LEFT_MOTOR_PIN, OUTPUT);
   pinMode (FRONT_MOTOR_PIN, OUTPUT);
   pinMode (REAR_MOTOR_PIN, OUTPUT);
-  
+  pinMode (RIGHT_MOTOR_DIR, OUTPUT);
+  pinMode (LEFT_MOTOR_DIR, OUTPUT);
+  pinMode (FRONT_MOTOR_DIR, OUTPUT);
+  pinMode (REAR_MOTOR_DIR, OUTPUT);
+
+  digitalWrite(RIGHT_MOTOR_DIR, HIGH);
+  digitalWrite(LEFT_MOTOR_DIR, HIGH);
+  digitalWrite(FRONT_MOTOR_DIR, HIGH);
+  digitalWrite(REAR_MOTOR_DIR, HIGH);
+
   // Starts the radio controller readings
   setup_pwmRead (); 
 }
@@ -71,8 +83,8 @@ loop()
   // If RC data is available or 25ms has passed since last update (adjust to > frame rate of receiver)
   if (RC_avail() || now - rc_update > 22){
     readRCInput (channels, rc_in, servo_us);
-    //calcWantedDepth (&set_depth, servo_us[2]);
-    //pid_dive.setpoint = set_depth;
+    calcWantedDepth (&set_depth, servo_us[1]);
+    pid_dive.setpoint = set_depth;
     
     rc_update = now;
   }
@@ -85,10 +97,13 @@ loop()
 
   // Calculate and write motor signals
   if (now - last_motor_writing > motor_write_rate){
-    getDiveOutput (&rear_motor_speed, &front_motor_speed, pid_dive.setpoint, pid_dive.control_signal); 
+    getDiveOutput (&rear_motor_speed, &front_motor_speed, pid_dive.control_signal); 
     getBalanceReduction (&rear_motor_speed, &front_motor_speed, pid_balance.control_signal);
-    getSteeringOutput (rc_in[0], rc_in[1], &right_motor_speed, &left_motor_speed);
-
+    checkDiveMotorOutput (set_depth, &front_motor_speed, &rear_motor_speed);
+    
+    getSteeringOutput (servo_us[0], RIGHT_MOTOR_DIR, &right_motor_speed);
+    getSteeringOutput (servo_us[2], LEFT_MOTOR_DIR, &left_motor_speed);
+    
     setMotorSpeed (RIGHT_MOTOR_PIN, right_motor_speed);
     setMotorSpeed (LEFT_MOTOR_PIN, left_motor_speed);
     setMotorSpeed (REAR_MOTOR_PIN, rear_motor_speed);
@@ -126,25 +141,37 @@ debugPrint ()
   Serial.print(front_motor_speed);
   Serial.print("\t\t");
   Serial.print("Control signal: ");
-  Serial.print(pid_dive.control_signal);
+  Serial.print(pid_dive.control_signal);  
   
   Serial.println();
   Serial.println();
+  
 //  Serial.print("Servo 1: ");
 //  Serial.print(servo_us[0]);
+//  //Serial.print("\t");
 //  //Serial.print(rc_in[0]);
-//  Serial.print("\t\t\t");
+//  Serial.print("\t\t");
 //  Serial.print("Servo 2: ");
 //  Serial.print(servo_us[1]);
+//  //Serial.print("\t");
 //  //Serial.print(rc_in[1]);
-//  Serial.print("\t\t\t");
+//  Serial.print("\t\t");
 //  Serial.print("Servo 3: ");
 //  Serial.print(servo_us[2]);
+//  //Serial.print("\t");
 //  //Serial.print(rc_in[2]);
-//  Serial.print("\t\t\t");
+//  Serial.print("\t\t");
 //  Serial.print("Servo 4: ");
-//  Serial.println(servo_us[3]);
+//  Serial.print(servo_us[3]);
+//  //Serial.print("\t");
 //  //Serial.print(rc_in[3]);
+//  //Serial.print("\t\t");
+//  Serial.println();
+//  Serial.print("Right motor speed: ");
+//  Serial.print(right_motor_speed);
+//  Serial.print("\t\t");
+//  Serial.print("Left motor speed: ");
+//  Serial.print(left_motor_speed);
 //  Serial.println();
 //  Serial.println();
 }
