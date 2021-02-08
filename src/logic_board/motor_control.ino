@@ -32,53 +32,37 @@ pidControl (pidData       data,
 }
 
 void 
-getSteeringOutput (float  rc_in_one,
-                   float  rc_in_two,
-                   int*   left_motor_speed, 
-                   int*   right_motor_speed)
+getSteeringOutput (int    rc_input,
+                   int    motor_pin,
+                   int*   motor_output)
 {
-  float mix1 = (rc_in_one * -1.0) - rc_in_two;     // Channel 1 (ELV) - Channel 2 (AIL)
-  float mix2 = (rc_in_one * -1.0) + rc_in_two;     // Channel 1 (ELV) + Channel 2 (AIL)
-
-  if(mix1 > 1) {
-    mix1 = 1;
-  }else if (mix1 < -1) {
-    mix1 = -1;
+  int output;
+  
+  if (rc_input >= 1500){
+    digitalWrite(motor_pin, HIGH);
+    output = map (rc_input, 1500, 2000, 0, 255);
+  }else {
+    digitalWrite(motor_pin, LOW); 
+    output = map (rc_input, 1500, 1000, 0, 255);    
   }
 
-  if(mix2 > 1) {
-    mix2 = 1;
-  }else if (mix2 < -1) {
-    mix2 = -1;  
-  }
+  if (output > 255)
+    output = 255;
 
-  mix1 = mix1 * 100;
-  mix2 = mix2 * 100;
-
-  if (mix1 < 0.0)
-    mix1 = 0.0;
-
-  if (mix2 < 0.0)
-    mix2 = 0.0;
-
-  *left_motor_speed = map ((int) mix2, 0, 100, 0, 255);
-  *right_motor_speed = map ((int) mix1, 0, 100, 0, 255);
+  *motor_output = output;
 }
 
 void 
 getDiveOutput (int*  rear_motor_speed, 
                int*  front_motor_speed,
-               int   set_point,
                int   control_signal)
 {
   int motor_speed;
 
-  if (set_point <= 2)
-    motor_speed = 0;
-  else if (control_signal < 0)
-    motor_speed = map(control_signal, 0, -255, depth_idle, 0);
+  if (control_signal < 0)
+    motor_speed = map(control_signal, 0, -255, motor_idle_speed, 0);
   else{
-    motor_speed = depth_idle + control_signal;
+    motor_speed = motor_idle_speed + control_signal;
 
     if (motor_speed > 255)
       motor_speed = 255;
@@ -98,21 +82,41 @@ getBalanceReduction (int*     rear_motor_speed,
 
   if (control_signal < 0)
     reduce = control_signal * -1;
- 
+
+  // 128 allows us to reduce half of the motor power
   balance_reduction = map (reduce, 0, 90, 0, 128);
 
   if (control_signal < 0) {
-    *rear_motor_speed = *rear_motor_speed - balance_reduction;
+    if ((*rear_motor_speed - balance_reduction) >= 0) {
+      *rear_motor_speed = *rear_motor_speed - balance_reduction;
+    } else {
+      *rear_motor_speed = 0;
+    }
   }else {
-    *front_motor_speed = *front_motor_speed - balance_reduction;
+    if ((*front_motor_speed - balance_reduction) >= 0) {
+      *front_motor_speed = *front_motor_speed - balance_reduction;
+    } else {
+      *front_motor_speed = 0;
+    }
+  }
+}
+
+void
+checkDiveMotorOutput (int   set_depth,
+                      int*  front_motor_speed,
+                      int*  rear_motor_speed)
+{
+  if(set_depth < 2){
+    *front_motor_speed = 0;
+    *rear_motor_speed = 0;
   }
 }
 
 void
 setMotorSpeed (int   motor_pin,  
                int   motor_speed)
-{
-
+{ 
+  const int minimum_motor_output = 31;
   
-  (motor_speed > 15) ? analogWrite (motor_pin, motor_speed) : analogWrite (motor_pin, 0);
+  (motor_speed > minimum_motor_output) ? analogWrite (motor_pin, motor_speed) : analogWrite (motor_pin, 0);
 }
