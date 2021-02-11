@@ -7,36 +7,29 @@ updateSensors ()
 }
 
 void
-readSensors (int*     pitch,
-             int*     pressure, 
-             int*     depth, 
-             float*   heading,
-             float*   temperature,
-             float*   acceleration)
+readSensors (Sensors*   sensor_values)
 {
   float temp_depth = 0.0;
   
-  *pitch = (int) gyroSensor.readEulerPitch ();
-  *heading = gyroSensor.readEulerHeading ();
-  *acceleration = gyroSensor.readAccelerometer(X_AXIS);
+  sensor_values->pitch = (int) gyroSensor.readEulerPitch ();
+  sensor_values->heading = gyroSensor.readEulerHeading ();
+  sensor_values->acceleration = gyroSensor.readAccelerometer(X_AXIS);
 
-  *pressure = (int) depthSensor.pressure ();
-  *temperature = depthSensor.temperature ();
+  sensor_values->pressure = (int) depthSensor.pressure ();
+  sensor_values->temperature = depthSensor.temperature ();
 
   // Converts depth into mm stored as a int
   temp_depth = depthSensor.depth ();
   temp_depth = temp_depth * 1000;
-  *depth = (int) temp_depth;
+  sensor_values->depth = (int) temp_depth;
 }
 
 int
-correctDepth(int     depth,
-             int     depth_offset)
-{
-  int return_val;
+correctDepth(int*     depth,
+             int      depth_offset)
+{ 
+  int temp_int;
   
-  return_val = depth - depth_offset;
-  return_val = (return_val > 0) ? return_val : 0;
-
-  return return_val;
+  temp_int = depth - depth_offset;
+  *depth = (temp_int > 0) ? temp_int : 0;
 }

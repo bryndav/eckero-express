@@ -1,6 +1,15 @@
 #ifndef _DATABOARDDEF_H_
 #define _DATABOARDDEF_H_
 
+typedef struct Sensors {
+  int pitch;
+  int pressure;
+  int depth;
+  float heading;
+  float temperature;
+  float acceleration;
+}Sensors;
+
 typedef struct Pos {
   char UTCtime[10];
   float latitude;

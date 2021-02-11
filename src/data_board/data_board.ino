@@ -18,12 +18,8 @@ unsigned long last_sampel = 0;
 unsigned long last_transmission = 0;
 unsigned long last_debug_print = 0;
 
-int pitch = 0;
-int pressure = 0;
-int depth = 0;
-float heading = 0.0;
-float temperature = 0.0;
-float acceleration = 0.0;
+Sensors sensor_values = {0, 0, 0, 0.0, 0.0, 0.0};
+
 float current_speed = 0.0;
 
 int depth_offset = 540;
@@ -60,22 +56,26 @@ loop ()
 
   if ((now - last_sampel) >= sampel_period) {
       updateSensors ();
-      readSensors (&pitch, &pressure, &depth, &heading, &temperature, &acceleration);
-      depth = correctDepth(depth, depth_offset);
-      current_speed = calcVelocity(current_speed, acceleration);
-      distance_traveled = calcDistance(distance_traveled, current_speed, acceleration);
+      readSensors (&sensor_values);
+      
       last_sampel = now;
   }
 
   if (now - last_transmission > transmission_period){
-    return_code = sendInt (PITCH_TRANS, &pitch);
-    return_code = sendInt (DEPTH_TRANS, &depth);
-    return_code = sendFloat (HEADING_TRANS, &heading);
+    calcVelocity(&current_speed, sensor_values.acceleration);
+    calcDistance(&distance_traveled, current_speed, sensor_values.acceleration);
+    correctDepth(&sensor_values.depth, depth_offset);
+    
+    return_code = sendInt (PITCH_TRANS, &sensor_values.pitch);
+    return_code = sendInt (DEPTH_TRANS, &sensor_values.depth);
+    return_code = sendFloat (HEADING_TRANS, &sensor_values.heading);
+    
     last_transmission = now;
   }
 
   if (now - last_debug_print > debug_period) {
     debugPrint();
+    
     last_debug_print = now;
   }
 }
@@ -83,19 +83,17 @@ loop ()
 void
 debugPrint()
 {
-  Serial.print("Milliseconds since startup: ");
-  Serial.println(now);
   Serial.print("Depth: ");
-  Serial.print(depth);
+  Serial.print(sensor_values.depth);
   Serial.print("\t\t\t");
   Serial.print("Pitch: ");
-  Serial.print(pitch);
+  Serial.print(sensor_values.pitch);
   Serial.print("\t\t\t");
   Serial.print("Heading: ");
-  Serial.print(heading);
+  Serial.print(sensor_values.heading);
   Serial.print("\t\t\t");
   Serial.print("Temprature: ");
-  Serial.print(temperature);
+  Serial.print(sensor_values.temperature);
   Serial.println();
   Serial.println();
 }

@@ -83,16 +83,15 @@ loop()
   // If RC data is available or 25ms has passed since last update (adjust to > frame rate of receiver)
   if (RC_avail() || now - rc_update > 22){
     readRCInput (channels, rc_in, servo_us);
-    calcWantedDepth (&set_depth, servo_us[1]);
-    pid_dive.setpoint = set_depth;
     
     rc_update = now;
   }
 
-  //PID controller signals//
+  //PID controller signals
   if (now - pid_balance.last_time >= pid_calc_rate){
-    pid_balance = pidControl (pid_balance, angle, now);
-    pid_dive = pidControl (pid_dive, depth, now);
+    calcWantedDepth (&pid_dive.setpoint, servo_us[1]);
+    pidControl (&pid_balance, angle, now);
+    pidControl (&pid_dive, depth, now);
   }
 
   // Calculate and write motor signals
@@ -113,7 +112,8 @@ loop()
   }
 
   if (now - last_debug_print > debug_rate){
-    debugPrint();  
+    debugPrint();
+    
     last_debug_print = now;
   }
 }

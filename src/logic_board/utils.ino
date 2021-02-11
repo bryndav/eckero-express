@@ -1,6 +1,6 @@
 void 
-calcWantedDepth (float*   set_depth, 
-                 int      servo_input)
+calcWantedDepth (int* set_depth, 
+                 int  servo_input)
 {
   if (servo_input < 1000)
     servo_input = 1000;
