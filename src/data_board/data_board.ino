@@ -14,7 +14,9 @@ SoftwareSerial gps_serial(GPS_RX_PIN, GPS_TX_PIN);
 MS5837 depthSensor;
 
 /*** Global variables ***/
-unsigned long last_sampel = 0;
+const uint16_t t1_load = 0;
+const uint16_t t1_comp = 39999; // Gives 20 ms interrupts 
+
 unsigned long last_transmission = 0;
 unsigned long last_debug_print = 0;
 
@@ -29,6 +31,24 @@ void
 setup ()
 {
   const int fresh_water = 997;
+
+  // Reset Timer1 control register A
+  TCCR1A = 0;
+
+  // Set prescaler to 256
+  TCCR1B &= ~(1 << CS12);
+  TCCR1B |= (1 << CS11);
+  TCCR1B &= ~(1 << CS10);
+
+  // Reset Timer1 and set compare value
+  TCNT1 = t1_load;
+  OCR1A = t1_comp;
+
+  // Enable Timer1 compare interrupt
+  TIMSK1 = (1 << OCIE1A);
+
+  // Enable global interrupts
+  sei();
   
   Serial.begin (115200);
   I2C.begin ();
@@ -53,13 +73,6 @@ loop ()
   const int transmission_period = 100;
   const int debug_period = 1000;
   unsigned long now = millis ();
-
-  if ((now - last_sampel) >= sampel_period) {
-      updateSensors ();
-      readSensors (&sensor_values);
-      
-      last_sampel = now;
-  }
 
   if (now - last_transmission > transmission_period){
     calcVelocity(&current_speed, sensor_values.acceleration);
@@ -96,4 +109,11 @@ debugPrint()
   Serial.print(sensor_values.temperature);
   Serial.println();
   Serial.println();
+}
+
+ISR(TIMER1_COMPA_vect){
+  TCNT1 = t1_load;
+  
+  updateSensors ();
+  readSensors (&sensor_values);
 }
