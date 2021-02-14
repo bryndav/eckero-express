@@ -36,15 +36,14 @@ int left_motor_speed;
 int rear_motor_speed;
 int front_motor_speed;
 
-const int motor_idle_speed = 90;
 float set_depth;
 int depth;
 int angle;
 float heading;
 
 const int pid_calc_rate = 100;
-pidData pid_balance = {0, 0.0, 0.0, 3.0, 0.0, 0.0, pid_calc_rate, 0, 0.0, 90, -90};
-pidData pid_dive = {10, 0.0, 0.0, 30.0, 0.0, 0.0, pid_calc_rate, 0, 0.0, 255, -255};
+pidData pid_balance = {0, 0.0, 0.0, 1.0, 0.0, 0.0, pid_calc_rate, 0, 0.0, 90, -90};
+pidData pid_dive = {8, 0.0, 0.0, 30.0, 0.0, 0.0, pid_calc_rate, 0, 0.0, 255, -255};
 
 void
 setup () 
@@ -66,11 +65,13 @@ setup ()
 
   digitalWrite(RIGHT_MOTOR_DIR, HIGH);
   digitalWrite(LEFT_MOTOR_DIR, HIGH);
-  digitalWrite(FRONT_MOTOR_DIR, HIGH);
+  digitalWrite(FRONT_MOTOR_DIR, LOW);
   digitalWrite(REAR_MOTOR_DIR, HIGH);
 
+  set_depth = pid_dive.setpoint;
+
   // Starts the radio controller readings
-  setup_pwmRead (); 
+  //setup_pwmRead (); 
 }
 
 void 
@@ -80,14 +81,14 @@ loop()
   const int motor_write_rate = 1000;
   unsigned long now = millis ();
 
-  // If RC data is available or 25ms has passed since last update (adjust to > frame rate of receiver)
-  if (RC_avail() || now - rc_update > 22){
-    readRCInput (channels, rc_in, servo_us);
-    calcWantedDepth (&set_depth, servo_us[1]);
-    pid_dive.setpoint = set_depth;
-    
-    rc_update = now;
-  }
+//  // If RC data is available or 25ms has passed since last update (adjust to > frame rate of receiver)
+//  if (RC_avail() || now - rc_update > 22){
+//    readRCInput (channels, rc_in, servo_us);
+//    calcWantedDepth (&set_depth, servo_us[1]);
+//    pid_dive.setpoint = set_depth;
+//    
+//    rc_update = now;
+//  }
 
   //PID controller signals//
   if (now - pid_balance.last_time >= pid_calc_rate){
@@ -97,8 +98,9 @@ loop()
 
   // Calculate and write motor signals
   if (now - last_motor_writing > motor_write_rate){
-    getDiveOutput (&rear_motor_speed, &front_motor_speed, pid_dive.control_signal); 
+    getDiveOutput (&rear_motor_speed, &front_motor_speed, pid_dive.control_signal);     
     getBalanceReduction (&rear_motor_speed, &front_motor_speed, pid_balance.control_signal);
+
     checkDiveMotorOutput (set_depth, &front_motor_speed, &rear_motor_speed);
     
     getSteeringOutput (servo_us[0], RIGHT_MOTOR_DIR, &right_motor_speed);
