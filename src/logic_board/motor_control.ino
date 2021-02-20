@@ -57,19 +57,11 @@ getDiveOutput (int*  rear_motor_speed,
                int*  front_motor_speed,
                int   control_signal)
 {
-  int motor_speed;
+  const int r_motor_idle_speed = 95;
+  const int f_motor_idle_speed = 140;
 
-  if (control_signal < 0)
-    motor_speed = map(control_signal, 0, -255, motor_idle_speed, 0);
-  else{
-    motor_speed = motor_idle_speed + control_signal;
-
-    if (motor_speed > 255)
-      motor_speed = 255;
-  }
-
-  *rear_motor_speed = motor_speed;
-  *front_motor_speed = motor_speed;
+  *rear_motor_speed = r_motor_idle_speed + control_signal;
+  *front_motor_speed = f_motor_idle_speed + control_signal;
 }
 
 void 
@@ -87,17 +79,11 @@ getBalanceReduction (int*     rear_motor_speed,
   balance_reduction = map (reduce, 0, 90, 0, 128);
 
   if (control_signal < 0) {
-    if ((*rear_motor_speed - balance_reduction) >= 0) {
-      *rear_motor_speed = *rear_motor_speed - balance_reduction;
-    } else {
-      *rear_motor_speed = 0;
-    }
-  }else {
-    if ((*front_motor_speed - balance_reduction) >= 0) {
+    if ((*rear_motor_speed - balance_reduction) >= 0)
       *front_motor_speed = *front_motor_speed - balance_reduction;
-    } else {
-      *front_motor_speed = 0;
-    }
+  }else {
+    if ((*front_motor_speed - balance_reduction) >= 0)
+      *rear_motor_speed = *rear_motor_speed - balance_reduction;
   }
 }
 
@@ -106,7 +92,9 @@ checkDiveMotorOutput (int   set_depth,
                       int*  front_motor_speed,
                       int*  rear_motor_speed)
 {
-  if(set_depth < 2){
+  int minimum_depth = 2;
+  
+  if(set_depth <= minimum_depth){
     *front_motor_speed = 0;
     *rear_motor_speed = 0;
   }
