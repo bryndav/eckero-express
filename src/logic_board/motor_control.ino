@@ -1,34 +1,38 @@
 #include "LogicBoardDef.h"
 
-pidData 
-pidControl (pidData       data, 
+void 
+pidControl (pidData*      data, 
             int           input,
             unsigned long now)
 {
-  pidData temp = data;
-
-  double error = temp.setpoint - input;
-  temp.total_error += error;                                       // Accumalates the error - integral term
-
-  if (temp.total_error >= temp.max_control) {
-    temp.total_error = temp.max_control;
-  }else if (temp.total_error <= temp.min_control) { 
-    temp.total_error = temp.min_control;
-  }
+  double error = data->setpoint - input;
   
-  double delta_error = error - temp.last_error;                    // Difference of error for derivative term
-  temp.control_signal = temp.Kp * error + (temp.Ki * temp.T) * temp.total_error + (temp.Kd / temp.T) * delta_error; 
+  data->total_error += error;                                       // Accumalates the error - integral term
+  data->total_error = checkMaxMin(data->max_control, data->min_control, data->total_error);
+  
+  double delta_error = error - data->last_error;                    // Difference of error for derivative term
+  
+  data->control_signal = data->Kp * error + (data->Ki * data->T) * data->total_error + (data->Kd / data->T) * delta_error; 
+  data->control_signal = checkMaxMin(data->max_control, data->min_control, data->control_signal);
 
-  if (temp.control_signal >= temp.max_control) {
-      temp.control_signal = temp.max_control;
-  }else if (temp.control_signal <= temp.min_control){
-      temp.control_signal = temp.min_control;
+  data->last_error = error;
+  data->last_time = now; 
+}
+
+double
+checkMaxMin (int    max_val,
+             int    min_val,
+             double value)
+{
+  double return_val = value;
+
+  if((int) value >= max_val) {
+    return_val = max_val;
+  }else if ((int) value <= min_val) {
+    return_val = min_val;
   }
-    
-  temp.last_error = error;
-  temp.last_time = now; 
 
-  return temp;
+  return return_val;
 }
 
 void 
@@ -69,8 +73,8 @@ getBalanceReduction (int*     rear_motor_speed,
                      int*     front_motor_speed,  
                      double   control_signal)
 {
-  double reduce = control_signal;
   int balance_reduction;
+  double reduce = control_signal;
 
   if (control_signal < 0)
     reduce = control_signal * -1;
@@ -78,13 +82,7 @@ getBalanceReduction (int*     rear_motor_speed,
   // 128 allows us to reduce half of the motor power
   balance_reduction = map (reduce, 0, 90, 0, 128);
 
-  if (control_signal < 0) {
-    if ((*rear_motor_speed - balance_reduction) >= 0)
-      *front_motor_speed = *front_motor_speed - balance_reduction;
-  }else {
-    if ((*front_motor_speed - balance_reduction) >= 0)
-      *rear_motor_speed = *rear_motor_speed - balance_reduction;
-  }
+  (control_signal < 0) ? *rear_motor_speed = *rear_motor_speed - balance_reduction : *front_motor_speed = *front_motor_speed - balance_reduction;
 }
 
 void
@@ -98,6 +96,12 @@ checkDiveMotorOutput (int   set_depth,
     *front_motor_speed = 0;
     *rear_motor_speed = 0;
   }
+
+  if(*rear_motor_speed < 0)
+    *rear_motor_speed = 0;
+
+  if(*front_motor_speed < 0)
+    *front_motor_speed = 0;
 }
 
 void

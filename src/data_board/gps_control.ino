@@ -123,35 +123,23 @@ degreeConversion (char* nmea)
   return deg;
 }
 
-bool 
-newCoordinates (float longitude, 
-                float latitude,
-                float old_long,
-                float old_lat)
+bool
+newCoordinate (float current_coordinate,
+               float old_coordinate)
 {
-    bool new_value = false;
-    float diff = 0.0;
-    float coordinateOffset = 0.000005;
+  float diff;
+  float coordinate_offset = 0.000005;
+  bool new_coordinate = false;
 
-    diff = old_long - longitude;
+  diff = old_coordinate - current_coordinate;
 
-    if (diff < 0.0){
-      diff = diff * -1.0;
-    }
+  if (diff < 0.0){
+    diff = diff * -1.0;
+  }
 
-    if (diff > coordinateOffset){
-      new_value = true;
-    }
+  if (diff > coordinate_offset){
+    new_coordinate = true;
+  }
 
-    diff = old_lat - latitude;
-
-    if (diff < 0.0){
-      diff = diff * -1.0;
-    }
-  
-    if (diff > coordinateOffset){
-      new_value = true;
-    }
-
-    return new_value;
+  return new_coordinate;
 }
