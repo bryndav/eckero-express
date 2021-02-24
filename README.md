@@ -1,6 +1,6 @@
 # Ålen
 Projectdokumentation och kod till Ålen projektet. En autonom liten ubåt som ska färdas mellan GPS koordinater.
-För att testa navigeringssystemet finns också delprojektet tvålen som är en 
+För att testa navigeringssystemet finns också delprojektet Tvålen som är en förenklad landgående variant.
 
 Plannering:
 
