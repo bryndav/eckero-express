@@ -38,8 +38,6 @@ int front_motor_speed;
 float current_speed = 0.0;
 float distance_traveled = 0.0;
 
-float set_depth;
-
 const int pid_calc_rate = 100;
 pidData pid_balance = {0, 0.0, 0.0, 1.0, 0.0, 0.0, pid_calc_rate, 0, 0.0, 90, -90};
 pidData pid_dive = {8, 0.0, 0.0, 30.0, 0.0, 0.0, pid_calc_rate, 0, 0.0, 255, -255};
@@ -117,6 +115,7 @@ loop ()
   }
 
   if (now - last_debug_print > debug_rate) {
+    readSerial();
     debugPrint();
     
     last_debug_print = now;
@@ -130,7 +129,7 @@ debugPrint()
   Serial.print(sensor_values.depth);
   Serial.print("\t\t\t");
   Serial.print("Set depth: ");
-  Serial.print(set_depth);
+  Serial.print(pid_dive.setpoint);
   Serial.print("\t\t\t");
   Serial.print("Angle: ");
   Serial.print(sensor_values.pitch);
@@ -145,6 +144,12 @@ debugPrint()
   Serial.print("\t\t");
   Serial.print("Front motor speed: ");
   Serial.print(front_motor_speed);
+  Serial.print("\t\t");
+  Serial.print("Left motor speed: ");
+  Serial.print(left_motor_speed); 
+  Serial.print("\t\t");
+  Serial.print("Right motor speed: ");
+  Serial.print(right_motor_speed);
   Serial.print("\t\t");
   Serial.print("Control signal: ");
   Serial.print(pid_dive.control_signal);
