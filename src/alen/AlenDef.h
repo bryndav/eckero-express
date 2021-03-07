@@ -39,4 +39,13 @@ typedef struct pid {
   int min_control;
 }pidData;
 
+typedef enum {
+  BACK_MOTOR = 66,
+  FRONT_MOTOR = 70,
+  LEFT_MOTOR = 76,
+  RIGHT_MOTOR = 82,
+  BOTH_FORWARD = 87,
+  DEPTH = 68
+} trans_def;
+
 #endif
