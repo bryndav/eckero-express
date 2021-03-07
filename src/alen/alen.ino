@@ -27,8 +27,7 @@ const uint16_t t1_comp = 39999; // Gives 20 ms interrupts
 
 // Timestamps
 unsigned long rc_update = 0;
-unsigned long last_motor_writing = 0;
-unsigned long last_debug_print = 0;
+unsigned long last_motor_writing, last_debug_print, last_sampel;
 
 // Operations
 int right_motor_speed = 0;
@@ -68,27 +67,9 @@ setup ()
   digitalWrite(LEFT_MOTOR_DIR, HIGH);
   digitalWrite(FRONT_MOTOR_DIR, LOW);
   digitalWrite(REAR_MOTOR_DIR, HIGH);
-
-  // Reset Timer1 control register A
-  TCCR1A = 0;
-
-  // Set prescaler to 256
-  TCCR1B &= ~(1 << CS12);
-  TCCR1B |= (1 << CS11);
-  TCCR1B &= ~(1 << CS10);
-
-  // Reset Timer1 and set compare value
-  TCNT1 = t1_load;
-  OCR1A = t1_comp;
-
-  // Enable Timer1 compare interrupt
-  TIMSK1 = (1 << OCIE1A);
-
-  // Enable global interrupts
-  sei();
   
   gyroSensor.initSensor ();
-  gyroSensor.setOperationMode (OPERATION_MODE_NDOF);
+  gyroSensor.setOperationMode (OPERATION_MODE_MAGONLY);
   gyroSensor.setUpdateMode (MANUAL);
   
   depthSensor.init ();
@@ -103,7 +84,16 @@ loop ()
 {
   const int debug_rate = 1000;
   const int motor_write_rate = 1000;
+  const int sampel_period = 20;
   unsigned long now = millis ();
+
+  // Read sensor values
+  if ((now - last_sampel) >= sampel_period) {  
+    updateSensors ();
+    readSensors (&sensor_values);
+
+    last_sampel = now;
+  }
 
   //PID control signal calculations
   if (now - pid_balance.last_time >= pid_calc_rate){
@@ -138,19 +128,19 @@ debugPrint()
 {
   Serial.print("Depth: ");
   Serial.print(sensor_values.depth);
-  Serial.print("\t");
+  Serial.print("\t\t\t");
   Serial.print("Set depth: ");
   Serial.print(set_depth);
-  Serial.print("\t");
+  Serial.print("\t\t\t");
   Serial.print("Angle: ");
   Serial.print(sensor_values.pitch);
-  Serial.print("\t");
+  Serial.print("\t\t\t");
   Serial.print("Heading: ");
   Serial.print(sensor_values.heading);
-  Serial.print("\t");
+  Serial.print("\t\t\t");
   Serial.print("Temprature: ");
-  Serial.print(sensor_values.temperature);
-  Serial.println("Rear motor speed: ");
+  Serial.println(sensor_values.temperature);
+  Serial.print("Rear motor speed: ");
   Serial.print(rear_motor_speed); 
   Serial.print("\t\t");
   Serial.print("Front motor speed: ");
@@ -160,11 +150,4 @@ debugPrint()
   Serial.print(pid_dive.control_signal);
   Serial.println();
   Serial.println();
-}
-
-ISR(TIMER1_COMPA_vect){
-  TCNT1 = t1_load;
-  
-  updateSensors ();
-  readSensors (&sensor_values);
 }
