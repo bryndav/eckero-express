@@ -38,9 +38,8 @@ typedef struct pos {
 
 typedef enum {
   WAIT_FOR_GPS = 10,
-  MAG_OPERATIONS = 30,
-  
   PLAN_COURSE = 20,
+  MAG_OPERATIONS = 30,
   NORMAL_OPERATIONS = 40,
   TARGET_REACHED = 50,
 };

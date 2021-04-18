@@ -13,7 +13,7 @@ getPos()
     index = gpsSerial.readBytesUntil(0x0D, NMEA, 88);
     
     // Uncomment to see raw serial string
-    Serial.println(NMEA);
+    //Serial.println(NMEA);
   }
 
   // Grab GPRMC message containing the bearing in true north format

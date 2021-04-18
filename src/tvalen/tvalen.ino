@@ -1,6 +1,6 @@
 #include <Arduino_LSM9DS1.h>
 #include <Servo.h>
-#include <MadgwickAHRS.h>
+//#include <MadgwickAHRS.h>
 #include "SensorFusion.h"
 #include "TvalenDef.h"
 
@@ -25,8 +25,8 @@ const int earth_radius = 6371000;
 
 struct GPSData gps_data = {" ", 0.0, 'F', 0.0, 'F', 0, 0, 0.0, 0.0, false};
 
-struct pos pos_1 = {59.302701, 18.037118, NULL};
-struct pos pos_2 = {59.298950, 18.033263, NULL};
+struct pos pos_1 = {59.300488, 18.037304, NULL};
+struct pos pos_2 = {59.300712, 18.037873, NULL};
 struct pos curr_pos = {0.0, 0.0, NULL};
 struct pos* destination = NULL;
 
@@ -35,7 +35,7 @@ double distance_to_target;
 int degree_diff;
 
 //Motor related variables
-pidData pid_steering = {0, 0.0, 0.0, 0.5, 0.0, 0.0, 200, 0, 0, 22, 0};
+pidData pid_steering = {0, 0.0, 0.0, 1, 0.0, 0.0, 200, 0, 0, 22, 0};
 
 int servo_signal;
 int steering;
@@ -138,21 +138,13 @@ void loop() {
 
       digitalWrite(RELAY_PIN, HIGH);
 
-      if (destination->latitude == pos_1.latitude && destination->longitude == pos_1.longitude) {
-        heading = readMagnometerDir(10);
-
-        digitalWrite(GREEN, LOW);
-        digitalWrite(BLUE, HIGH);
-        digitalWrite(RED, LOW);
+      heading = readMagnometerDir(10);
       
-        STATE = MAG_OPERATIONS;
-      }else {
-        digitalWrite(GREEN, HIGH);
-        digitalWrite(BLUE, LOW);
-        digitalWrite(RED, LOW);
-        
-        STATE = NORMAL_OPERATIONS;
-      }
+      digitalWrite(GREEN, LOW);
+      digitalWrite(BLUE, HIGH);
+      digitalWrite(RED, LOW);
+      
+      STATE = NORMAL_OPERATIONS;
 
       break;
 
@@ -187,6 +179,8 @@ void loop() {
         updatePosition(gps_data);
 
         distance_to_target = calcDistance(curr_pos, *destination);
+        pid_steering.setpoint = calcBearing(curr_pos, *destination);
+        
         degree_diff = calcAngle(heading, pid_steering.setpoint);
         steering = findTurnSide(heading, pid_steering.setpoint);
         pidControl(&pid_steering, degree_diff, current_time);
@@ -250,35 +244,51 @@ void readSerial() {
 void
 debugPrint()
 {
-  Serial.print("pitch = ");
-  Serial.print(pitch);
-  Serial.print(" roll = ");
-  Serial.print(roll);
-  Serial.print(" yaw = ");
-  Serial.println(heading);  
-//  
-//  Serial.print("Distance to target: ");
-//  Serial.println(distance_to_target);
-//  Serial.print("Bearing to target: ");
-//  Serial.println(bearing_to_target);
-//
-//  if(steering > 0) {
-//    Serial.print("Right turn: ");
-//  }else {
-//    Serial.print("Left turn: ");
-//  }
-//  
-//  Serial.println(degree_diff);
-
-  Serial.print("Heading: ");
-  Serial.println(heading);
-
-  if(steering > 0)
-    Serial.println("Right turn");
-  else
-    Serial.println("Left turn");
   
+  Serial.print("State: ");
+  switch(STATE) {
+    case WAIT_FOR_GPS:
+      Serial.println("WAIT_FOR_GPS");
+      break;
+    case MAG_OPERATIONS:
+      Serial.println("MAG_OPERATIONS");
+      break;
+    case PLAN_COURSE:
+      Serial.println("PLAN_COURSE");
+      break;
+    case NORMAL_OPERATIONS:
+      Serial.println("NORMAL_OPERATIONS");
+      break;
+    case TARGET_REACHED:
+      Serial.println("TARGET_REACHED");
+      break;
+  }
+  
+  Serial.print("Longitude: ");
+  Serial.print(curr_pos.longitude, 6);
+  Serial.print("\t\tLatitude: ");
+  Serial.print(curr_pos.latitude, 6);
+  Serial.print("\t\tHeading: ");
+  Serial.println(heading);  
+
   Serial.print("Servo signal: ");
-  Serial.println(pid_steering.control_signal);
+  Serial.print(pid_steering.control_signal);
+  Serial.print("\t\tDirection: ");
+  if(steering > 0) {
+    Serial.println("Right");
+  }else {
+    Serial.println("Left");
+  }
+
+  Serial.print("Target longitude: ");
+  Serial.print(destination->longitude, 6);
+  Serial.print("\tTarget latitude: ");
+  Serial.println(destination->latitude, 6);
+  Serial.print("Distance to target: ");
+  Serial.print(distance_to_target);
+  Serial.print("\tBearing to target: ");
+  Serial.println(pid_steering.setpoint);
+
+  Serial.println();
   Serial.println();
 }
