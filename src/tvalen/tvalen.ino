@@ -25,8 +25,8 @@ const int earth_radius = 6371000;
 
 struct GPSData gps_data = {" ", 0.0, 'F', 0.0, 'F', 0, 0, 0.0, 0.0, false};
 
-struct pos pos_1 = {59.300488, 18.037304, NULL};
-struct pos pos_2 = {59.300712, 18.037873, NULL};
+struct pos pos_1 = {59.302723, 18.037233, NULL};
+struct pos pos_2 = {59.303305, 18.038316, NULL};
 struct pos curr_pos = {0.0, 0.0, NULL};
 struct pos* destination = NULL;
 
@@ -35,7 +35,7 @@ double distance_to_target;
 int degree_diff;
 
 //Motor related variables
-pidData pid_steering = {0, 0.0, 0.0, 1, 0.0, 0.0, 200, 0, 0, 22, 0};
+pidData pid_steering = {0, 0.0, 0.0, 0.5, 0.0, 0.0, 200, 0, 0, 22, 0};
 
 int servo_signal;
 int steering;
@@ -45,13 +45,16 @@ const float sensorRate = 119;
 
 float igx, igy, igz, iax, iay, iaz, imx, imy, imz;
 float gx, gy, gz, ax, ay, az, mx, my, mz;
-float pitch, roll, heading, deltat;
+float pitch, roll, imu_heading, deltat;
+float heading;
 
 //Time related variables
 unsigned long last_gps_reading, last_debug_print;
 unsigned long current_time;
 unsigned long micros_per_reading;
 unsigned long micros_previous;
+const int gps_reading_rate = 1000;
+const int debug_rate = 1000;
 
 void setup() {
   
@@ -101,13 +104,7 @@ void setup() {
 
 
 void loop() {
-  const int gps_reading_rate = 1000;
-  const int debug_rate = 1000;
   current_time = millis();
-
-//  if (micros_now - micros_previous >= micros_per_reading){
-//    micros_previous = micros_previous + micros_per_reading;
-//  }
 
   readIMU();
 
@@ -125,7 +122,6 @@ void loop() {
       break;
 
     case PLAN_COURSE:
-      bool cold_start;
 
       if (destination != NULL) {
         destination = destination->next;
@@ -133,12 +129,12 @@ void loop() {
         destination = &pos_1;
       }
 
-      og_distance_to_target = calcDistance(curr_pos, *destination);
       pid_steering.setpoint = calcBearing(curr_pos, *destination);
+      
+      //Add five seconds delay for reading GPS position
+      last_gps_reading = current_time + 5000;
 
       digitalWrite(RELAY_PIN, HIGH);
-
-      heading = readMagnometerDir(10);
       
       digitalWrite(GREEN, LOW);
       digitalWrite(BLUE, HIGH);
@@ -148,36 +144,13 @@ void loop() {
 
       break;
 
-    case MAG_OPERATIONS:
-    
-      gps_data = getPos();
-      updatePosition(gps_data);
-      distance_to_target = calcDistance(curr_pos, *destination);
-      
-      heading = readMagnometerDir(1);
-      degree_diff = calcAngle(heading, pid_steering.setpoint);
-      steering = findTurnSide(heading, pid_steering.setpoint);
-      pidControl(&pid_steering, degree_diff, current_time);
-      
-      setSteering(pid_steering.control_signal, steering);
-
-      if ((gps_data.bearing - heading < 20.0) ||(og_distance_to_target - distance_to_target > 10.0)){
-        digitalWrite(GREEN, HIGH);
-        digitalWrite(BLUE, LOW);
-        digitalWrite(RED, LOW);
-        
-        STATE = NORMAL_OPERATIONS;
-      }
-
-      break;
-
     case NORMAL_OPERATIONS:
 
       if (current_time - last_gps_reading > gps_reading_rate) {
         gps_data = getPos();
-        last_gps_reading = current_time;
         updatePosition(gps_data);
-
+        last_gps_reading = current_time;
+    
         distance_to_target = calcDistance(curr_pos, *destination);
         pid_steering.setpoint = calcBearing(curr_pos, *destination);
         
@@ -227,24 +200,19 @@ void loop() {
 
     last_debug_print = current_time;
   }
-    
-
 }
 
 void readSerial() {
-
   while(Serial.available()) {
     char val[12] = "";
     Serial.readBytesUntil(0x0a, val, 12);
     heading = atoi(val);
   }
-  
 }
 
 void
 debugPrint()
 {
-  
   Serial.print("State: ");
   switch(STATE) {
     case WAIT_FOR_GPS:
@@ -268,7 +236,7 @@ debugPrint()
   Serial.print(curr_pos.longitude, 6);
   Serial.print("\t\tLatitude: ");
   Serial.print(curr_pos.latitude, 6);
-  Serial.print("\t\tHeading: ");
+  Serial.print("\tHeading: ");
   Serial.println(heading);  
 
   Serial.print("Servo signal: ");
@@ -287,7 +255,9 @@ debugPrint()
   Serial.print("Distance to target: ");
   Serial.print(distance_to_target);
   Serial.print("\tBearing to target: ");
-  Serial.println(pid_steering.setpoint);
+  Serial.print(pid_steering.setpoint);
+  Serial.print("\tDegree diff: ");
+  Serial.println(abs(pid_steering.setpoint - heading));
 
   Serial.println();
   Serial.println();

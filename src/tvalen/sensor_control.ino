@@ -29,5 +29,5 @@ readIMU() {
 
   pitch = filter.getPitch();
   roll = filter.getRoll();
-  heading = filter.getYaw();
+  imu_heading = filter.getYaw();
 }
