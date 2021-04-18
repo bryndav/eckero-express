@@ -1,6 +1,6 @@
 #include <SoftwareSerial.h>
 
-SoftwareSerial gps_serial(3, 4); // Rx, Tx
+SoftwareSerial gps_serial(9, 10); // Rx, Tx
 
 struct Position {
 	char UTCtime[10];

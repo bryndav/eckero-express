@@ -18,21 +18,15 @@ Plannering:
 	
 	14 mars
 
-		*Planerning inför Weda besök
+		*Få igång Arduino nano, bra värden från IMU:n
 	
 	21 mars
-
-		*Vattentest
-		*Ny elektronikutformning - Klart
+	
 		*Utkast till GPS styrning - Klart
-		*Avstamp i koden för Ålen, okej fram tills dess att vi för över Tvålen lärdomar
 		
 	28 mars
-
-		*Körning hos Weda
-		*Testa svängradier 
-		*Testa dykning
-		*Mäta hastigheter
+	
+		*Ny elektronikutformning - Klart
 
 	4 april
 
