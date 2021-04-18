@@ -1,0 +1,284 @@
+#include <Arduino_LSM9DS1.h>
+#include <Servo.h>
+#include <MadgwickAHRS.h>
+#include "SensorFusion.h"
+#include "TvalenDef.h"
+
+#define GPS_RX_PIN 2
+#define GPS_TX_PIN 3
+#define SERVO_PIN 4
+#define RELAY_PIN 5
+#define RED 22     
+#define BLUE 24     
+#define GREEN 23
+
+UART gpsSerial (digitalPinToPinName(GPS_RX_PIN), digitalPinToPinName(GPS_TX_PIN), NC, NC);  // create a hardware serial port named mySerial with RX: pin 13 and TX: pin 8
+SF filter;
+//Madgwick filter;
+Servo steeringServo;
+
+int STATE = WAIT_FOR_GPS;
+
+//Navigation related variables
+const double pi = 3.141592653589793;
+const int earth_radius = 6371000;
+
+struct GPSData gps_data = {" ", 0.0, 'F', 0.0, 'F', 0, 0, 0.0, 0.0, false};
+
+struct pos pos_1 = {59.302701, 18.037118, NULL};
+struct pos pos_2 = {59.298950, 18.033263, NULL};
+struct pos curr_pos = {0.0, 0.0, NULL};
+struct pos* destination = NULL;
+
+double og_distance_to_target;
+double distance_to_target;
+int degree_diff;
+
+//Motor related variables
+pidData pid_steering = {0, 0.0, 0.0, 0.5, 0.0, 0.0, 200, 0, 0, 22, 0};
+
+int servo_signal;
+int steering;
+
+//Sensor related variables
+const float sensorRate = 119;
+
+float igx, igy, igz, iax, iay, iaz, imx, imy, imz;
+float gx, gy, gz, ax, ay, az, mx, my, mz;
+float pitch, roll, heading, deltat;
+
+//Time related variables
+unsigned long last_gps_reading, last_debug_print;
+unsigned long current_time;
+unsigned long micros_per_reading;
+unsigned long micros_previous;
+
+void setup() {
+  
+  Serial.begin(9600);
+  gpsSerial.begin(9600);
+
+//  filter.begin(sensorRate);
+//  micros_per_reading = 1000000 / 119;
+  
+  
+  steeringServo.attach(SERVO_PIN);
+  steeringServo.write(90);
+
+  pinMode (RELAY_PIN, OUTPUT);
+  pinMode(RED, OUTPUT);
+  pinMode(BLUE, OUTPUT);
+  pinMode(GREEN, OUTPUT);
+  
+  digitalWrite(GREEN, LOW);
+  digitalWrite(BLUE, LOW);
+  digitalWrite(RED, HIGH);
+  digitalWrite(RELAY_PIN, LOW);
+  
+  if (!IMU.begin()) {
+    Serial.println("Failed to initialize IMU!");
+    while (1);
+  }
+
+  IMU.setAccelFS(3);
+  IMU.setAccelODR(5);
+  IMU.setAccelOffset(0.005054, -0.005799, -0.012964);
+  IMU.setAccelSlope(0.998262, 1.000600, 1.000083);
+  
+  IMU.setGyroFS(2);
+  IMU.setGyroODR(5);
+  IMU.setGyroOffset (-0.289093, 0.215729, -0.071218);
+  IMU.setGyroSlope (1.159825, 1.136199, 1.143236);
+  
+  IMU.setMagnetFS(0);
+  IMU.setMagnetODR(8);
+  IMU.setMagnetOffset(-8.621420, 11.906535, 1.370036);
+  IMU.setMagnetSlope (1.230131, 1.603933, 1.566816); 
+
+  //Connect gps points
+  pos_1.next = &pos_2;
+}
+
+
+void loop() {
+  const int gps_reading_rate = 1000;
+  const int debug_rate = 1000;
+  current_time = millis();
+
+//  if (micros_now - micros_previous >= micros_per_reading){
+//    micros_previous = micros_previous + micros_per_reading;
+//  }
+
+  readIMU();
+
+  switch(STATE)
+  {
+    case WAIT_FOR_GPS:
+      gps_data = getPos();
+
+      if (gps_data.valid){
+        updatePosition(gps_data);
+        
+        STATE = PLAN_COURSE;
+      }
+
+      break;
+
+    case PLAN_COURSE:
+      bool cold_start;
+
+      if (destination != NULL) {
+        destination = destination->next;
+      }else {
+        destination = &pos_1;
+      }
+
+      og_distance_to_target = calcDistance(curr_pos, *destination);
+      pid_steering.setpoint = calcBearing(curr_pos, *destination);
+
+      digitalWrite(RELAY_PIN, HIGH);
+
+      if (destination->latitude == pos_1.latitude && destination->longitude == pos_1.longitude) {
+        heading = readMagnometerDir(10);
+
+        digitalWrite(GREEN, LOW);
+        digitalWrite(BLUE, HIGH);
+        digitalWrite(RED, LOW);
+      
+        STATE = MAG_OPERATIONS;
+      }else {
+        digitalWrite(GREEN, HIGH);
+        digitalWrite(BLUE, LOW);
+        digitalWrite(RED, LOW);
+        
+        STATE = NORMAL_OPERATIONS;
+      }
+
+      break;
+
+    case MAG_OPERATIONS:
+    
+      gps_data = getPos();
+      updatePosition(gps_data);
+      distance_to_target = calcDistance(curr_pos, *destination);
+      
+      heading = readMagnometerDir(1);
+      degree_diff = calcAngle(heading, pid_steering.setpoint);
+      steering = findTurnSide(heading, pid_steering.setpoint);
+      pidControl(&pid_steering, degree_diff, current_time);
+      
+      setSteering(pid_steering.control_signal, steering);
+
+      if ((gps_data.bearing - heading < 20.0) ||(og_distance_to_target - distance_to_target > 10.0)){
+        digitalWrite(GREEN, HIGH);
+        digitalWrite(BLUE, LOW);
+        digitalWrite(RED, LOW);
+        
+        STATE = NORMAL_OPERATIONS;
+      }
+
+      break;
+
+    case NORMAL_OPERATIONS:
+
+      if (current_time - last_gps_reading > gps_reading_rate) {
+        gps_data = getPos();
+        last_gps_reading = current_time;
+        updatePosition(gps_data);
+
+        distance_to_target = calcDistance(curr_pos, *destination);
+        degree_diff = calcAngle(heading, pid_steering.setpoint);
+        steering = findTurnSide(heading, pid_steering.setpoint);
+        pidControl(&pid_steering, degree_diff, current_time);
+        setSteering(pid_steering.control_signal, steering);
+      }
+
+      if (distance_to_target < 3.0) {
+        STATE = TARGET_REACHED;
+      }
+
+      break;
+
+    case TARGET_REACHED:
+ 
+      if(destination->next != NULL){
+        STATE = PLAN_COURSE;
+      }else {
+          digitalWrite(RELAY_PIN, LOW);
+
+          // Reached final destination, stop
+          while(1){
+            digitalWrite(GREEN, LOW);
+            digitalWrite(BLUE, LOW);
+            digitalWrite(RED, LOW);
+
+            delay(1000);
+
+            digitalWrite(GREEN, HIGH);
+            digitalWrite(BLUE, LOW);
+            digitalWrite(RED, LOW);
+
+            delay(1000);
+          }
+      }
+
+      break;
+      
+    default:
+      digitalWrite(RELAY_PIN, LOW);
+  }
+
+  if (current_time - last_debug_print > debug_rate){
+    debugPrint();
+
+    last_debug_print = current_time;
+  }
+    
+
+}
+
+void readSerial() {
+
+  while(Serial.available()) {
+    char val[12] = "";
+    Serial.readBytesUntil(0x0a, val, 12);
+    heading = atoi(val);
+  }
+  
+}
+
+void
+debugPrint()
+{
+  Serial.print("pitch = ");
+  Serial.print(pitch);
+  Serial.print(" roll = ");
+  Serial.print(roll);
+  Serial.print(" yaw = ");
+  Serial.println(heading);  
+//  
+//  Serial.print("Distance to target: ");
+//  Serial.println(distance_to_target);
+//  Serial.print("Bearing to target: ");
+//  Serial.println(bearing_to_target);
+//
+//  if(steering > 0) {
+//    Serial.print("Right turn: ");
+//  }else {
+//    Serial.print("Left turn: ");
+//  }
+//  
+//  Serial.println(degree_diff);
+
+  Serial.print("Heading: ");
+  Serial.println(heading);
+
+  if(steering > 0)
+    Serial.println("Right turn");
+  else
+    Serial.println("Left turn");
+  
+  Serial.print("Servo signal: ");
+  Serial.println(pid_steering.control_signal);
+  Serial.println();
+}
