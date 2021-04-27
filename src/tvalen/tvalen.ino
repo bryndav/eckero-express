@@ -13,8 +13,6 @@
 #define GREEN 23
 
 UART gpsSerial (digitalPinToPinName(GPS_RX_PIN), digitalPinToPinName(GPS_TX_PIN), NC, NC);  // create a hardware serial port named mySerial with RX: pin 13 and TX: pin 8
-SF filter;
-//Madgwick filter;
 Servo steeringServo;
 
 int STATE = WAIT_FOR_GPS;
@@ -25,13 +23,12 @@ const int earth_radius = 6371000;
 
 struct GPSData gps_data = {" ", 0.0, 'F', 0.0, 'F', 0, 0, 0.0, 0.0, false};
 
-struct pos pos_1 = {59.302723, 18.037233, NULL};
+struct pos pos_1 = {59.305559, 18.033621, NULL};
 struct pos pos_2 = {59.303305, 18.038316, NULL};
 struct pos curr_pos = {0.0, 0.0, NULL};
 struct pos* destination = NULL;
 
-double og_distance_to_target;
-double distance_to_target;
+double distance_to_target = 99999.0;
 int degree_diff;
 
 //Motor related variables
@@ -40,19 +37,14 @@ pidData pid_steering = {0, 0.0, 0.0, 0.5, 0.0, 0.0, 200, 0, 0, 22, 0};
 int servo_signal;
 int steering;
 
-//Sensor related variables
-const float sensorRate = 119;
-
-float igx, igy, igz, iax, iay, iaz, imx, imy, imz;
-float gx, gy, gz, ax, ay, az, mx, my, mz;
-float pitch, roll, imu_heading, deltat;
+float magY, magX, magZ;
+float imu_heading, inclanation;
 float heading;
 
 //Time related variables
-unsigned long last_gps_reading, last_debug_print;
+unsigned long last_gps_reading, last_heading_reading, last_debug_print;
 unsigned long current_time;
-unsigned long micros_per_reading;
-unsigned long micros_previous;
+const int heading_reading_rate = 250;
 const int gps_reading_rate = 1000;
 const int debug_rate = 1000;
 
@@ -60,10 +52,6 @@ void setup() {
   
   Serial.begin(9600);
   gpsSerial.begin(9600);
-
-//  filter.begin(sensorRate);
-//  micros_per_reading = 1000000 / 119;
-  
   
   steeringServo.attach(SERVO_PIN);
   steeringServo.write(90);
@@ -82,21 +70,12 @@ void setup() {
     Serial.println("Failed to initialize IMU!");
     while (1);
   }
-
-  IMU.setAccelFS(3);
-  IMU.setAccelODR(5);
-  IMU.setAccelOffset(0.005054, -0.005799, -0.012964);
-  IMU.setAccelSlope(0.998262, 1.000600, 1.000083);
-  
-  IMU.setGyroFS(2);
-  IMU.setGyroODR(5);
-  IMU.setGyroOffset (-0.289093, 0.215729, -0.071218);
-  IMU.setGyroSlope (1.159825, 1.136199, 1.143236);
   
   IMU.setMagnetFS(0);
   IMU.setMagnetODR(8);
   IMU.setMagnetOffset(-8.621420, 11.906535, 1.370036);
   IMU.setMagnetSlope (1.230131, 1.603933, 1.566816); 
+  IMU.magnetUnit = MICROTESLA;  //   GAUSS   MICROTESLA   NANOTESLA
 
   //Connect gps points
   pos_1.next = &pos_2;
@@ -106,7 +85,17 @@ void setup() {
 void loop() {
   current_time = millis();
 
-  readIMU();
+  if (current_time - last_heading_reading > heading_reading_rate){
+    readHeading();
+
+    last_heading_reading = current_time;
+  }
+
+  if (current_time - last_debug_print > debug_rate){
+    debugPrint();
+
+    last_debug_print = current_time;
+  }
 
   switch(STATE)
   {
@@ -130,9 +119,7 @@ void loop() {
       }
 
       pid_steering.setpoint = calcBearing(curr_pos, *destination);
-      
-      //Add five seconds delay for reading GPS position
-      last_gps_reading = current_time + 5000;
+      last_gps_reading = current_time;
 
       digitalWrite(RELAY_PIN, HIGH);
       
@@ -147,15 +134,15 @@ void loop() {
     case NORMAL_OPERATIONS:
 
       if (current_time - last_gps_reading > gps_reading_rate) {
-        gps_data = getPos();
+        //gps_data = getPos();
         updatePosition(gps_data);
         last_gps_reading = current_time;
     
         distance_to_target = calcDistance(curr_pos, *destination);
         pid_steering.setpoint = calcBearing(curr_pos, *destination);
         
-        degree_diff = calcAngle(heading, pid_steering.setpoint);
-        steering = findTurnSide(heading, pid_steering.setpoint);
+        degree_diff = calcAngle(imu_heading, pid_steering.setpoint);
+        steering = findTurnSide(imu_heading, pid_steering.setpoint);
         pidControl(&pid_steering, degree_diff, current_time);
         setSteering(pid_steering.control_signal, steering);
       }
@@ -175,6 +162,7 @@ void loop() {
 
           // Reached final destination, stop
           while(1){
+            Serial.println("Reached final destination....");
             digitalWrite(GREEN, LOW);
             digitalWrite(BLUE, LOW);
             digitalWrite(RED, LOW);
@@ -194,12 +182,6 @@ void loop() {
     default:
       digitalWrite(RELAY_PIN, LOW);
   }
-
-  if (current_time - last_debug_print > debug_rate){
-    debugPrint();
-
-    last_debug_print = current_time;
-  }
 }
 
 void readSerial() {
@@ -218,9 +200,6 @@ debugPrint()
     case WAIT_FOR_GPS:
       Serial.println("WAIT_FOR_GPS");
       break;
-    case MAG_OPERATIONS:
-      Serial.println("MAG_OPERATIONS");
-      break;
     case PLAN_COURSE:
       Serial.println("PLAN_COURSE");
       break;
@@ -237,7 +216,7 @@ debugPrint()
   Serial.print("\t\tLatitude: ");
   Serial.print(curr_pos.latitude, 6);
   Serial.print("\tHeading: ");
-  Serial.println(heading);  
+  Serial.println(imu_heading);  
 
   Serial.print("Servo signal: ");
   Serial.print(pid_steering.control_signal);
@@ -257,7 +236,7 @@ debugPrint()
   Serial.print("\tBearing to target: ");
   Serial.print(pid_steering.setpoint);
   Serial.print("\tDegree diff: ");
-  Serial.println(abs(pid_steering.setpoint - heading));
+  Serial.println(degree_diff);
 
   Serial.println();
   Serial.println();
