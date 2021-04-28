@@ -23,8 +23,8 @@ const int earth_radius = 6371000;
 
 struct GPSData gps_data = {" ", 0.0, 'F', 0.0, 'F', 0, 0, 0.0, 0.0, false};
 
-struct pos pos_1 = {59.305559, 18.033621, NULL};
-struct pos pos_2 = {59.303305, 18.038316, NULL};
+struct pos pos_1 = {59.301336, 18.037656, NULL};
+struct pos pos_2 = {59.301481, 18.037543, NULL};
 struct pos curr_pos = {0.0, 0.0, NULL};
 struct pos* destination = NULL;
 
@@ -85,12 +85,6 @@ void setup() {
 void loop() {
   current_time = millis();
 
-  if (current_time - last_heading_reading > heading_reading_rate){
-    readHeading();
-
-    last_heading_reading = current_time;
-  }
-
   if (current_time - last_debug_print > debug_rate){
     debugPrint();
 
@@ -115,6 +109,7 @@ void loop() {
       if (destination != NULL) {
         destination = destination->next;
       }else {
+        Serial.println("Set position!");
         destination = &pos_1;
       }
 
@@ -133,18 +128,27 @@ void loop() {
 
     case NORMAL_OPERATIONS:
 
+      
+      if (current_time - last_heading_reading > heading_reading_rate){
+        readHeading();
+        
+        degree_diff = calcAngle(imu_heading, pid_steering.setpoint);
+        steering = findTurnSide(imu_heading, pid_steering.setpoint);
+        
+        pidControl(&pid_steering, degree_diff, current_time);
+        setSteering(pid_steering.control_signal, steering);
+
+        last_heading_reading = current_time;
+      }
+    
+
       if (current_time - last_gps_reading > gps_reading_rate) {
-        //gps_data = getPos();
+        gps_data = getPos();
         updatePosition(gps_data);
         last_gps_reading = current_time;
     
         distance_to_target = calcDistance(curr_pos, *destination);
         pid_steering.setpoint = calcBearing(curr_pos, *destination);
-        
-        degree_diff = calcAngle(imu_heading, pid_steering.setpoint);
-        steering = findTurnSide(imu_heading, pid_steering.setpoint);
-        pidControl(&pid_steering, degree_diff, current_time);
-        setSteering(pid_steering.control_signal, steering);
       }
 
       if (distance_to_target < 3.0) {
@@ -155,7 +159,7 @@ void loop() {
 
     case TARGET_REACHED:
  
-      if(destination->next != NULL){
+      if(destination->next){
         STATE = PLAN_COURSE;
       }else {
           digitalWrite(RELAY_PIN, LOW);
@@ -237,7 +241,7 @@ debugPrint()
   Serial.print(pid_steering.setpoint);
   Serial.print("\tDegree diff: ");
   Serial.println(degree_diff);
-
+  
   Serial.println();
   Serial.println();
 }

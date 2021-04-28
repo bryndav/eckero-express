@@ -3,7 +3,7 @@ pidControl (pidData*      data,
             int           input,
             unsigned long now)
 {
-  double error = abs(data->setpoint - input);
+  double error = input;
 
   data->total_error += error;                                       // Accumalates the error - integral term
   data->total_error = checkMaxMin(data->max_control, data->min_control, data->total_error);
