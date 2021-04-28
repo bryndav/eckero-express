@@ -1,7 +1,5 @@
 #include <Arduino_LSM9DS1.h>
 #include <Servo.h>
-//#include <MadgwickAHRS.h>
-#include "SensorFusion.h"
 #include "TvalenDef.h"
 
 #define GPS_RX_PIN 2
@@ -12,7 +10,7 @@
 #define BLUE 24     
 #define GREEN 23
 
-UART gpsSerial (digitalPinToPinName(GPS_RX_PIN), digitalPinToPinName(GPS_TX_PIN), NC, NC);  // create a hardware serial port named mySerial with RX: pin 13 and TX: pin 8
+UART gpsSerial (digitalPinToPinName(GPS_RX_PIN), digitalPinToPinName(GPS_TX_PIN), NC, NC);
 Servo steeringServo;
 
 int STATE = WAIT_FOR_GPS;
@@ -37,6 +35,7 @@ pidData pid_steering = {0, 0.0, 0.0, 0.5, 0.0, 0.0, 200, 0, 0, 22, 0};
 int servo_signal;
 int steering;
 
+//Sensor related variables
 float magY, magX, magZ;
 float imu_heading, inclanation;
 float heading;
@@ -186,62 +185,4 @@ void loop() {
     default:
       digitalWrite(RELAY_PIN, LOW);
   }
-}
-
-void readSerial() {
-  while(Serial.available()) {
-    char val[12] = "";
-    Serial.readBytesUntil(0x0a, val, 12);
-    heading = atoi(val);
-  }
-}
-
-void
-debugPrint()
-{
-  Serial.print("State: ");
-  switch(STATE) {
-    case WAIT_FOR_GPS:
-      Serial.println("WAIT_FOR_GPS");
-      break;
-    case PLAN_COURSE:
-      Serial.println("PLAN_COURSE");
-      break;
-    case NORMAL_OPERATIONS:
-      Serial.println("NORMAL_OPERATIONS");
-      break;
-    case TARGET_REACHED:
-      Serial.println("TARGET_REACHED");
-      break;
-  }
-  
-  Serial.print("Longitude: ");
-  Serial.print(curr_pos.longitude, 6);
-  Serial.print("\t\tLatitude: ");
-  Serial.print(curr_pos.latitude, 6);
-  Serial.print("\tHeading: ");
-  Serial.println(imu_heading);  
-
-  Serial.print("Servo signal: ");
-  Serial.print(pid_steering.control_signal);
-  Serial.print("\t\tDirection: ");
-  if(steering > 0) {
-    Serial.println("Right");
-  }else {
-    Serial.println("Left");
-  }
-
-  Serial.print("Target longitude: ");
-  Serial.print(destination->longitude, 6);
-  Serial.print("\tTarget latitude: ");
-  Serial.println(destination->latitude, 6);
-  Serial.print("Distance to target: ");
-  Serial.print(distance_to_target);
-  Serial.print("\tBearing to target: ");
-  Serial.print(pid_steering.setpoint);
-  Serial.print("\tDegree diff: ");
-  Serial.println(degree_diff);
-  
-  Serial.println();
-  Serial.println();
 }
