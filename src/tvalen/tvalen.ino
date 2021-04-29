@@ -21,10 +21,17 @@ const int earth_radius = 6371000;
 
 struct GPSData gps_data = {" ", 0.0, 'F', 0.0, 'F', 0, 0, 0.0, 0.0, false};
 
-struct pos pos_1 = {59.301336, 18.037656, NULL};
-struct pos pos_2 = {59.301481, 18.037543, NULL};
-struct pos curr_pos = {0.0, 0.0, NULL};
-struct pos* destination = NULL;
+struct pos travel_plan[] = {
+  {59.301346, 18.037636},
+  {59.301468, 18.037502},
+  {59.301500, 18.037663},
+  {59.301383, 18.037774}
+};
+
+struct pos curr_pos = {0.0, 0.0};
+struct pos destination = {0.0, 0.0};
+const int number_of_positions = sizeof travel_plan / sizeof travel_plan[0];
+int pos_index = 0;
 
 double distance_to_target = 99999.0;
 int degree_diff;
@@ -41,8 +48,7 @@ float imu_heading, inclanation;
 float heading;
 
 //Time related variables
-unsigned long last_gps_reading, last_heading_reading, last_debug_print;
-unsigned long current_time;
+unsigned long last_gps_reading, last_heading_reading, last_debug_print, current_time;
 const int heading_reading_rate = 250;
 const int gps_reading_rate = 1000;
 const int debug_rate = 1000;
@@ -55,7 +61,7 @@ void setup() {
   steeringServo.attach(SERVO_PIN);
   steeringServo.write(90);
 
-  pinMode (RELAY_PIN, OUTPUT);
+  pinMode(RELAY_PIN, OUTPUT);
   pinMode(RED, OUTPUT);
   pinMode(BLUE, OUTPUT);
   pinMode(GREEN, OUTPUT);
@@ -75,20 +81,11 @@ void setup() {
   IMU.setMagnetOffset(-8.621420, 11.906535, 1.370036);
   IMU.setMagnetSlope (1.230131, 1.603933, 1.566816); 
   IMU.magnetUnit = MICROTESLA;  //   GAUSS   MICROTESLA   NANOTESLA
-
-  //Connect gps points
-  pos_1.next = &pos_2;
 }
 
 
 void loop() {
   current_time = millis();
-
-  if (current_time - last_debug_print > debug_rate){
-    debugPrint();
-
-    last_debug_print = current_time;
-  }
 
   switch(STATE)
   {
@@ -97,6 +94,7 @@ void loop() {
 
       if (gps_data.valid){
         updatePosition(gps_data);
+        last_gps_reading = current_time;
         
         STATE = PLAN_COURSE;
       }
@@ -104,30 +102,39 @@ void loop() {
       break;
 
     case PLAN_COURSE:
-
-      if (destination != NULL) {
-        destination = destination->next;
-      }else {
-        Serial.println("Set position!");
-        destination = &pos_1;
-      }
-
-      pid_steering.setpoint = calcBearing(curr_pos, *destination);
-      last_gps_reading = current_time;
+      int NEXT_STATE;
 
       digitalWrite(RELAY_PIN, HIGH);
-      
       digitalWrite(GREEN, LOW);
       digitalWrite(BLUE, HIGH);
       digitalWrite(RED, LOW);
       
-      STATE = NORMAL_OPERATIONS;
+      if (destination.longitude == 0.0 && destination.latitude == 0.0){
+        destination = travel_plan[pos_index];
+
+        NEXT_STATE = NORMAL_OPERATIONS;
+        
+      }else if (pos_index < (number_of_positions - 1)) {
+        pos_index++;
+        destination = travel_plan[pos_index];
+
+        NEXT_STATE = NORMAL_OPERATIONS;
+        
+      }else {
+        Serial.println("Reached final destination");
+        
+        NEXT_STATE = TARGET_REACHED;
+      }
+      
+      pid_steering.setpoint = calcBearing(curr_pos, destination);
+      distance_to_target = calcDistance(curr_pos, destination);
+
+      STATE = NEXT_STATE;
 
       break;
 
     case NORMAL_OPERATIONS:
 
-      
       if (current_time - last_heading_reading > heading_reading_rate){
         readHeading();
         
@@ -139,50 +146,50 @@ void loop() {
 
         last_heading_reading = current_time;
       }
-    
 
       if (current_time - last_gps_reading > gps_reading_rate) {
         gps_data = getPos();
         updatePosition(gps_data);
         last_gps_reading = current_time;
     
-        distance_to_target = calcDistance(curr_pos, *destination);
-        pid_steering.setpoint = calcBearing(curr_pos, *destination);
+        distance_to_target = calcDistance(curr_pos, destination);
+        pid_steering.setpoint = calcBearing(curr_pos, destination);
       }
 
-      if (distance_to_target < 3.0) {
-        STATE = TARGET_REACHED;
+      if (distance_to_target < 2.5) {
+        STATE = PLAN_COURSE;
       }
 
       break;
 
     case TARGET_REACHED:
- 
-      if(destination->next){
-        STATE = PLAN_COURSE;
-      }else {
-          digitalWrite(RELAY_PIN, LOW);
 
-          // Reached final destination, stop
-          while(1){
-            Serial.println("Reached final destination....");
-            digitalWrite(GREEN, LOW);
-            digitalWrite(BLUE, LOW);
-            digitalWrite(RED, LOW);
+      digitalWrite(RELAY_PIN, LOW);
 
-            delay(1000);
+      // Reached final destination, stop
+      while(1){
+        digitalWrite(GREEN, LOW);
+        digitalWrite(BLUE, LOW);
+        digitalWrite(RED, LOW);
 
-            digitalWrite(GREEN, HIGH);
-            digitalWrite(BLUE, LOW);
-            digitalWrite(RED, LOW);
+        delay(1000);
 
-            delay(1000);
-          }
+        digitalWrite(GREEN, HIGH);
+        digitalWrite(BLUE, LOW);
+        digitalWrite(RED, LOW);
+
+        delay(1000);
       }
 
       break;
       
     default:
       digitalWrite(RELAY_PIN, LOW);
+  }
+
+  if (current_time - last_debug_print > debug_rate){
+    debugPrint();
+
+    last_debug_print = current_time;
   }
 }

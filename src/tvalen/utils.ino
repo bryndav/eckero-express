@@ -12,19 +12,21 @@ debugPrint()
   Serial.print("State: ");
   switch(STATE) {
     case WAIT_FOR_GPS:
-      Serial.println("WAIT_FOR_GPS");
+      Serial.print("WAIT_FOR_GPS");
       break;
     case PLAN_COURSE:
-      Serial.println("PLAN_COURSE");
+      Serial.print("PLAN_COURSE");
       break;
     case NORMAL_OPERATIONS:
-      Serial.println("NORMAL_OPERATIONS");
+      Serial.print("NORMAL_OPERATIONS");
       break;
     case TARGET_REACHED:
-      Serial.println("TARGET_REACHED");
+      Serial.print("TARGET_REACHED");
       break;
   }
-  
+
+  Serial.print("\t\t Position nr: ");
+  Serial.println(pos_index + 1);
   Serial.print("Longitude: ");
   Serial.print(curr_pos.longitude, 6);
   Serial.print("\t\tLatitude: ");
@@ -42,9 +44,9 @@ debugPrint()
   }
 
   Serial.print("Target longitude: ");
-  Serial.print(destination->longitude, 6);
+  Serial.print(destination.longitude, 6);
   Serial.print("\tTarget latitude: ");
-  Serial.println(destination->latitude, 6);
+  Serial.println(destination.latitude, 6);
   Serial.print("Distance to target: ");
   Serial.print(distance_to_target);
   Serial.print("\tBearing to target: ");

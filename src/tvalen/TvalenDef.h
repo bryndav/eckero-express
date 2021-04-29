@@ -33,7 +33,6 @@ typedef struct pidData {
 typedef struct pos {
   double latitude;
   double longitude;
-  struct pos* next;
 };
 
 typedef enum {
