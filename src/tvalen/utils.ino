@@ -25,7 +25,7 @@ debugPrint()
       break;
   }
 
-  Serial.print("\t\t Position nr: ");
+  Serial.print("\t\tPosition nr: ");
   Serial.println(pos_index + 1);
   Serial.print("Longitude: ");
   Serial.print(curr_pos.longitude, 6);
@@ -53,7 +53,35 @@ debugPrint()
   Serial.print(pid_steering.setpoint);
   Serial.print("\tDegree diff: ");
   Serial.println(degree_diff);
-  
+  displayCalStatus();
   Serial.println();
   Serial.println();
+}
+
+
+void displayCalStatus(void)
+{
+  /* Get the four calibration values (0..3) */
+  /* Any sensor data reporting 0 should be ignored, */
+  /* 3 means 'fully calibrated" */
+  uint8_t system, gyro, accel, mag;
+  system = gyro = accel = mag = 0;
+  bno.getCalibration(&system, &gyro, &accel, &mag);
+
+  /* The data should be ignored until the system calibration is > 0 */
+  Serial.print("\t");
+  if (!system)
+  {
+    Serial.print("! ");
+  }
+
+  /* Display the individual values */
+  Serial.print("Sys:");
+  Serial.print(system, DEC);
+  Serial.print(" G:");
+  Serial.print(gyro, DEC);
+  Serial.print(" A:");
+  Serial.print(accel, DEC);
+  Serial.print(" M:");
+  Serial.print(mag, DEC);
 }

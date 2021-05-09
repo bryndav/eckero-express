@@ -1,5 +1,9 @@
 #include <Arduino_LSM9DS1.h>
 #include <Servo.h>
+#include <Wire.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BNO055.h>
+#include <utility/imumaths.h>
 #include "TvalenDef.h"
 
 #define GPS_RX_PIN 2
@@ -12,6 +16,7 @@
 
 UART gpsSerial (digitalPinToPinName(GPS_RX_PIN), digitalPinToPinName(GPS_TX_PIN), NC, NC);
 Servo steeringServo;
+Adafruit_BNO055 bno = Adafruit_BNO055(55);
 
 int STATE = WAIT_FOR_GPS;
 
@@ -44,14 +49,14 @@ int steering;
 
 //Sensor related variables
 float magY, magX, magZ;
-float imu_heading, inclanation;
+float imu_heading, imu_pitch, imu_roll;
 float heading;
 
 //Time related variables
 unsigned long last_gps_reading, last_heading_reading, last_debug_print, current_time;
-const int heading_reading_rate = 250;
+const int heading_reading_rate = 100;
 const int gps_reading_rate = 1000;
-const int debug_rate = 1000;
+const int debug_rate = 200;
 
 void setup() {
   
@@ -71,16 +76,17 @@ void setup() {
   digitalWrite(RED, HIGH);
   digitalWrite(RELAY_PIN, LOW);
   
-  if (!IMU.begin()) {
-    Serial.println("Failed to initialize IMU!");
-    while (1);
+  /* Initialise the sensor */
+  if(!bno.begin())
+  {
+    while(1) {
+      Serial.println("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
+      delay(1000);
+    }
   }
   
-  IMU.setMagnetFS(0);
-  IMU.setMagnetODR(8);
-  IMU.setMagnetOffset(-8.621420, 11.906535, 1.370036);
-  IMU.setMagnetSlope (1.230131, 1.603933, 1.566816); 
-  IMU.magnetUnit = MICROTESLA;  //   GAUSS   MICROTESLA   NANOTESLA
+  delay(1000);
+  bno.setExtCrystalUse(true);
 }
 
 
@@ -136,7 +142,7 @@ void loop() {
     case NORMAL_OPERATIONS:
 
       if (current_time - last_heading_reading > heading_reading_rate){
-        readHeading();
+        readIMUData();
         
         degree_diff = calcAngle(imu_heading, pid_steering.setpoint);
         steering = findTurnSide(imu_heading, pid_steering.setpoint);
