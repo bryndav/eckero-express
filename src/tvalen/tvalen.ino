@@ -94,6 +94,19 @@ void setup() {
 void loop() {
   current_time = millis();
 
+
+  if (current_time - last_heading_reading > heading_reading_rate){
+    readIMUData();
+    
+    degree_diff = calcAngle(imu_heading, pid_steering.setpoint);
+    steering = findTurnSide(imu_heading, pid_steering.setpoint);
+    
+    pidControl(&pid_steering, degree_diff, current_time);
+    setSteering(pid_steering.control_signal, steering);
+  
+    last_heading_reading = current_time;
+  }
+
   switch(STATE)
   {
     case WAIT_FOR_GPS:
@@ -141,18 +154,6 @@ void loop() {
       break;
 
     case NORMAL_OPERATIONS:
-
-      if (current_time - last_heading_reading > heading_reading_rate){
-        readIMUData();
-        
-        degree_diff = calcAngle(imu_heading, pid_steering.setpoint);
-        steering = findTurnSide(imu_heading, pid_steering.setpoint);
-        
-        pidControl(&pid_steering, degree_diff, current_time);
-        setSteering(pid_steering.control_signal, steering);
-
-        last_heading_reading = current_time;
-      }
 
       if (current_time - last_gps_reading > gps_reading_rate) {
         gps_data = getPos();
