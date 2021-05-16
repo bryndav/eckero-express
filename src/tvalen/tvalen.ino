@@ -94,7 +94,6 @@ void setup() {
 void loop() {
   current_time = millis();
 
-
   if (current_time - last_heading_reading > heading_reading_rate){
     readIMUData();
     
