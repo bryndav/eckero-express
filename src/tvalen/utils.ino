@@ -38,11 +38,12 @@ debugPrint()
   Serial.print(pid_steering.control_signal);
   Serial.print("\t\tDirection: ");
   if(steering > 0) {
-    Serial.println("Right");
+    Serial.print("Right");
   }else {
-    Serial.println("Left");
+    Serial.print("Left");
   }
-
+  Serial.print("\t Satellites: ");
+  Serial.println(gps_data.numSats);
   Serial.print("Target longitude: ");
   Serial.print(destination.longitude, 6);
   Serial.print("\tTarget latitude: ");
@@ -69,7 +70,6 @@ void displayCalStatus(void)
   bno.getCalibration(&system, &gyro, &accel, &mag);
 
   /* The data should be ignored until the system calibration is > 0 */
-  Serial.print("\t");
   if (!system)
   {
     Serial.print("! ");
