@@ -1,4 +1,4 @@
-#include <Arduino_LSM9DS1.h>
+
 #include <Servo.h>
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
@@ -27,11 +27,11 @@ const int earth_radius = 6371000;
 struct GPSData gps_data = {" ", 0.0, 'F', 0.0, 'F', 0, 0, 0.0, 0.0, false};
 
 struct pos travel_plan[] = {
-  {59.299278, 18.032740},
-  {59.299318, 18.031827},
-  {59.299083, 18.031806},
-  {59.299009, 18.032702},
-  {59.299278, 18.032740}
+  {59.311070, 17.986796},
+  {59.311056, 17.985080},
+  {59.311440, 17.985123},
+  {59.311319, 17.986748},
+  {59.311790, 17.987687},
 };
 
 struct pos curr_pos = {0.0, 0.0};
@@ -43,7 +43,7 @@ double distance_to_target = 99999.0;
 int degree_diff;
 
 //Motor related variables
-pidData pid_steering = {0, 0.0, 0.0, 0.5, 0.0, 0.0, 200, 0, 0, 22, 0};
+pidData pid_steering = {0, 0.0, 0.0, 0.5, 0.0, 0.0, 200, 0, 0, 35, 0};
 
 int servo_signal;
 int steering;
