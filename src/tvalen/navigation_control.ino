@@ -220,12 +220,10 @@ calcBearing(pos curr,
 void
 updatePosition (GPSData gps_pos)
 {
-  if (gps_pos.valid){
-    curr_pos.latitude = gps_pos.latitude;
-    curr_pos.longitude = gps_pos.longitude;
+  curr_pos.latitude = gps_pos.latitude;
+  curr_pos.longitude = gps_pos.longitude;
 
-    heading = gps_pos.bearing;
-  }
+  heading = gps_pos.bearing;
 }
 
 
