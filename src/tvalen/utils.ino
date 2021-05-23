@@ -31,8 +31,10 @@ debugPrint()
   Serial.print(curr_pos.longitude, 6);
   Serial.print("\t\tLatitude: ");
   Serial.print(curr_pos.latitude, 6);
-  Serial.print("\tHeading: ");
-  Serial.println(imu_heading);  
+  Serial.print("\tIMU Heading: ");
+  Serial.print(imu_heading);  
+  Serial.print("\tGPS heading: ");
+  Serial.println(heading);
 
   Serial.print("Servo signal: ");
   Serial.print(pid_steering.control_signal);

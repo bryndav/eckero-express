@@ -9,8 +9,8 @@ pidControl (pidData*      data,
   data->total_error = checkMaxMin(data->max_control, data->min_control, data->total_error);
   
   double delta_error = error - data->last_error;                    // Difference of error for derivative term
-  
-  data->control_signal = data->Kp * error;
+
+  data->control_signal = data->Kp * error + (data->Ki * data->T) * data->total_error + (data->Kd / data->T) * delta_error;
   data->control_signal = checkMaxMin(data->max_control, data->min_control, data->control_signal);
   
   data->last_error = error;
@@ -20,13 +20,13 @@ pidControl (pidData*      data,
 double
 checkMaxMin (int    max_val,
              int    min_val,
-             double value)
+             double val)
 {
-  double return_val = value;
+  double return_val = val;
 
-  if((int) value >= max_val) {
+  if((int) val>= max_val) {
     return_val = max_val;
-  }else if ((int) value <= min_val) {
+  }else if ((int) val <= min_val) {
     return_val = min_val;
   }
 
@@ -87,8 +87,12 @@ setSteering(int  ctrl_signal,
             int  dir)
 {
   int pwm_signal;
+  const int rodder_offset = 0;
+  const int rodder_max = 135;
+  const int rodder_min = 45;
   
-  pwm_signal = (dir > 0) ? (90 - ctrl_signal) : (90 + ctrl_signal);
+  pwm_signal = (dir > 0) ? (90 - ctrl_signal - rodder_offset) : (90 + ctrl_signal - rodder_offset);
+  pwm_signal = checkMaxMin(rodder_max, rodder_min, pwm_signal);
 
   steeringServo.write(pwm_signal);
 }
