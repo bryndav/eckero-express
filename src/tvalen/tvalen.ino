@@ -43,7 +43,7 @@ double distance_to_target = 99999.0;
 int degree_diff;
 
 //Motor related variables
-pidData pid_steering = {0, 0.0, 0.0, 0.5, 0.0, 0.0, 200, 0, 0, 35, 0};
+pidData pid_steering = {0, 0.0, 0.0, 1.0, 0.0, 0.0, 200, 0, 0, 35, 0};
 
 int servo_signal;
 int steering;
