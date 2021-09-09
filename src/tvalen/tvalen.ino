@@ -89,12 +89,23 @@ void setup() {
 void loop() {
   current_time = millis();
 
-  if (current_time - last_debug_print > debug_rate){
-    //debugPrint();
-    radioCom(10);
+  if ((current_time - last_debug_print > debug_rate) && (STATE != RADIO_CTRL)){
+    int resp = 0;
 
+    //debugPrint();
+    radioCom();
+    resp = pollRadioRec();
+
+    // If there is data in the serial recieve buffer, turn off motor and enter radio ctrl mode
+    if(resp){
+      digitalWrite(RELAY_PIN, LOW);
+      STATE = RADIO_CTRL;
+    }
+    
     last_debug_print = current_time;
   }
+
+    
 
   switch(STATE)
   {
@@ -133,7 +144,6 @@ void loop() {
 
     case NORMAL_OPERATIONS:
 
-      
       if (current_time - last_heading_reading > heading_reading_rate){
         readHeading();
         
@@ -145,7 +155,6 @@ void loop() {
 
         last_heading_reading = current_time;
       }
-    
 
       if (current_time - last_gps_reading > gps_reading_rate) {
         gps_data = getPos();
@@ -156,16 +165,8 @@ void loop() {
         pid_steering.setpoint = calcBearing(curr_pos, *destination);
       }
 
-      if (current_time - last_radio_poll > radio_poll_rate){
-        
-      }
-
       if (distance_to_target < 3.0) {
         STATE = TARGET_REACHED;
-      }
-
-      if (radio_ctrl) {
-        STATE = RADIO_CTRL;
       }
 
       break;
@@ -199,7 +200,12 @@ void loop() {
       break;
 
     case RADIO_CTRL:
-      //recieve_instruction();
+      char instruction;
+
+      if (Serial1.available()){
+        instruction = recieveInstruction();
+        actOnInstruction(instruction);
+      }
 
       break;
       

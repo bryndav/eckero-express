@@ -74,68 +74,120 @@ debugPrint()
   Serial.println();
 }
 
-void radioCom(int msg_type)
+void radioCom()
 {
-  char msg[1024];
-
-  switch(msg_type) {
-    case STATUS_PRINT:
-      int dir = (steering > 0) ? 1 : 0;
-
-
-      //State
-      char state[64];
-      sprintf(state, "ST,%d\n", STATE);
-      Serial.print(state);
-      Serial1.print(state);
-
-      delay(60);
-
-      //Longitude
-      char longi[64];
-      sprintf(longi, "LT,%f\n", curr_pos.longitude);
-      Serial.print(longi);
-      Serial1.print(longi);
-
-      delay(60);
-
-      //Latitude
-      char lat[64];
-      sprintf(lat, "LA,%f\n", curr_pos.latitude);
-      Serial.print(lat);
-      Serial1.print(lat);
-
-      delay(60);
-    
-      //Heading
-      char head[64];
-      sprintf(head, "HE,%f\n", imu_heading);
-      Serial.print(head);
-      Serial1.print(head);
-
-      delay(60);
-
-      //Servo
-      char serv[64];
-      sprintf(serv, "SE,%d\n", pid_steering.control_signal);
-      Serial.print(serv);
-      Serial1.print(serv);
-
-      delay(60);
-
-      //Distance to target
-      char distance_to[64];
-      sprintf(distance_to, "DT,%f\n", distance_to_target);
-      Serial.print(distance_to);
-      Serial1.print(distance_to);
-
-      delay(60);
-      
-
-      break;
-  }
+  //State
+  char state[64];
+  sprintf(state, "ST,%d\n", STATE);
+  Serial.print(state);
+  Serial1.print(state);
+  
+  delay(60);
+  
+  //Longitude
+  char longi[64];
+  sprintf(longi, "LT,%f\n", curr_pos.longitude);
+  Serial.print(longi);
+  Serial1.print(longi);
+  
+  delay(60);
+  
+  //Latitude
+  char lat[64];
+  sprintf(lat, "LA,%f\n", curr_pos.latitude);
+  Serial.print(lat);
+  Serial1.print(lat);
+  
+  delay(60);
+  
+  //Heading
+  char head[64];
+  sprintf(head, "HE,%f\n", imu_heading);
+  Serial.print(head);
+  Serial1.print(head);
+  
+  delay(60);
+  
+  //Servo
+  char serv[64];
+  sprintf(serv, "SE,%d\n", pid_steering.control_signal);
+  Serial.print(serv);
+  Serial1.print(serv);
+  
+  delay(60);
+  
+  //Distance to target
+  char distance_to[64];
+  sprintf(distance_to, "DT,%f\n", distance_to_target);
+  Serial.print(distance_to);
+  Serial1.print(distance_to);
+  
+  delay(60);
 }
 
 bool pollRadioRec() {
   return Serial1.available();
+}
+
+byte recieveInstruction() {
+  byte instruction = Serial1.read();
+
+  return instruction;
+}
+
+void actOnInstruction(byte instruction) {
+  char resp[64];
+  char msg[64];
+  int servo_val;
+  
+  sprintf(resp, "Recieved instruction %c\n", instruction);
+  Serial.print(resp);
+  Serial1.print(resp);
+  delay(60);
+  
+  switch(instruction) {
+    case 71:
+      digitalWrite(RELAY_PIN, HIGH);
+      Serial.print("Motor ON\n");
+      Serial1.print("Motor ON\n");
+    break;
+    
+    case 83:
+      digitalWrite(RELAY_PIN, LOW);
+      Serial.print("Motor OFF\n");
+      Serial1.print("Motor OFF\n");
+    break;
+    
+    case 76:
+      servo_val = steeringServo.read();
+      servo_val = servo_val + 2;
+      servo_val = (servo_val > (90 + 22)) ? (90 + 22) : servo_val;
+      steeringServo.write(servo_val);
+
+      sprintf(msg, "Left 2 deg, new val %d\n", servo_val);
+      Serial.print(msg);
+      Serial1.print(msg);
+    break;
+
+    case 82:
+      servo_val = steeringServo.read();
+      servo_val = servo_val - 2;
+      servo_val = (servo_val > (90 - 22)) ? (90 - 22) : servo_val;
+      steeringServo.write(servo_val);
+
+      sprintf(msg, "Right 2 deg, new val %d\n", servo_val);
+      Serial.print(msg);
+      Serial1.print(msg);
+    break;
+    
+    case 67:
+      steeringServo.write(90);
+
+      sprintf(msg, "Centered steering servo, new value %d\n", 90);
+      Serial.print(msg);
+      Serial1.print(msg);
+    break;
+  }
+  
+  delay(60);
 }
