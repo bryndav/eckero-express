@@ -78,7 +78,7 @@ getPos()
   } 
 
   // Check if position should be considered valid
-  if(tmpPos.quality >= 1 && tmpPos.numSats >= 6 && newCoordinates(tmpPos.longitude, tmpPos.latitude)){
+  if(tmpPos.quality >= 1 && tmpPos.numSats >= 3 && newCoordinates(tmpPos.longitude, tmpPos.latitude)){
     tmpPos.valid = true;
   }else{
     tmpPos.valid = false;

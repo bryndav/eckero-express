@@ -41,15 +41,20 @@ float imu_heading, inclanation;
 float heading;
 
 //Time related variables
-unsigned long last_gps_reading, last_heading_reading, last_debug_print;
+unsigned long last_gps_reading, last_heading_reading, last_debug_print, last_radio_poll;
 unsigned long current_time;
 const int heading_reading_rate = 250;
 const int gps_reading_rate = 1000;
 const int debug_rate = 1000;
+const int radio_poll_rate = 1000;
+
+//Radio com variables
+bool radio_ctrl = false;
 
 void setup() {
   
   Serial.begin(9600);
+  Serial1.begin(9600);
   gpsSerial.begin(9600);
   
   steeringServo.attach(SERVO_PIN);
@@ -85,7 +90,8 @@ void loop() {
   current_time = millis();
 
   if (current_time - last_debug_print > debug_rate){
-    debugPrint();
+    //debugPrint();
+    radioCom(10);
 
     last_debug_print = current_time;
   }
@@ -150,8 +156,16 @@ void loop() {
         pid_steering.setpoint = calcBearing(curr_pos, *destination);
       }
 
+      if (current_time - last_radio_poll > radio_poll_rate){
+        
+      }
+
       if (distance_to_target < 3.0) {
         STATE = TARGET_REACHED;
+      }
+
+      if (radio_ctrl) {
+        STATE = RADIO_CTRL;
       }
 
       break;
@@ -162,10 +176,12 @@ void loop() {
         STATE = PLAN_COURSE;
       }else {
           digitalWrite(RELAY_PIN, LOW);
+          Serial1.println("Reached final destination....");
+          Serial.println("Reached final destination....");
 
           // Reached final destination, stop
           while(1){
-            Serial.println("Reached final destination....");
+            
             digitalWrite(GREEN, LOW);
             digitalWrite(BLUE, LOW);
             digitalWrite(RED, LOW);
@@ -179,6 +195,11 @@ void loop() {
             delay(1000);
           }
       }
+
+      break;
+
+    case RADIO_CTRL:
+      //recieve_instruction();
 
       break;
       

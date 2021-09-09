@@ -41,6 +41,8 @@ typedef enum {
   PLAN_COURSE = 20,
   NORMAL_OPERATIONS = 40,
   TARGET_REACHED = 50,
+  RADIO_CTRL = 60,
+  STATUS_PRINT = 10,
 };
 
 #endif
