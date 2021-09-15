@@ -69,7 +69,14 @@ debugPrint()
   Serial.print(pid_steering.setpoint);
   Serial.print("\tDegree diff: ");
   Serial.println(degree_diff);
-  
+  Serial.print("Sys:");
+  Serial.print(sys, DEC);
+  Serial.print(" G:");
+  Serial.print(gyro, DEC);
+  Serial.print(" A:");
+  Serial.print(accel, DEC);
+  Serial.print(" M:");
+  Serial.println(mag, DEC);
   Serial.println();
   Serial.println();
 }
@@ -123,6 +130,38 @@ void radioCom()
   Serial1.print(distance_to);
   
   delay(60);
+
+  //Syst
+  char syst[64];
+  sprintf(syst, "SY,%d\n", sys);
+  Serial.print(syst);
+  Serial1.print(syst);
+  
+  delay(60);
+
+  //Gyro
+  char gyr[64];
+  sprintf(gyr, "GY,%d\n", gyro);
+  Serial.print(gyr);
+  Serial1.print(gyr);
+  
+  delay(60);
+
+  //Mag
+  char magn[64];
+  sprintf(magn, "MA,%d\n", mag);
+  Serial.print(magn);
+  Serial1.print(magn);
+  
+  delay(60);
+
+  //Acc
+  char acc[64];
+  sprintf(acc, "AC,%d\n", accel);
+  Serial.print(acc);
+  Serial1.print(acc);
+  
+  delay(60);
 }
 
 bool pollRadioRec() {
@@ -138,9 +177,9 @@ byte recieveInstruction() {
 void actOnInstruction(byte instruction) {
   char resp[64];
   char msg[64];
-  int servo_val;
-  
-  sprintf(resp, "Recieved instruction %c\n", instruction);
+  int servo_val, servo_output;
+
+  sprintf(resp, "OK, Recieved instruction %c\n", instruction);
   Serial.print(resp);
   Serial1.print(resp);
   delay(60);
@@ -148,34 +187,32 @@ void actOnInstruction(byte instruction) {
   switch(instruction) {
     case 71:
       digitalWrite(RELAY_PIN, HIGH);
-      Serial.print("Motor ON\n");
-      Serial1.print("Motor ON\n");
+      Serial.print("OK, Motor ON\n");
+      Serial1.print("OK, Motor ON\n");
     break;
     
     case 83:
       digitalWrite(RELAY_PIN, LOW);
-      Serial.print("Motor OFF\n");
-      Serial1.print("Motor OFF\n");
+      Serial.print("OK, Motor OFF\n");
+      Serial1.print("OK, Motor OFF\n");
     break;
     
     case 76:
-      servo_val = steeringServo.read();
-      servo_val = servo_val + 2;
-      servo_val = (servo_val > (90 + 22)) ? (90 + 22) : servo_val;
-      steeringServo.write(servo_val);
+      servo_val = steeringServo.read() + 2 + 10;
+      servo_output = (servo_val > (90 + 35)) ? (90 + 35) : servo_val;
+      steeringServo.write(servo_output);
 
-      sprintf(msg, "Left 2 deg, new val %d\n", servo_val);
+      sprintf(msg, "OK, Left 2 deg, new val %d\n", servo_output);
       Serial.print(msg);
       Serial1.print(msg);
     break;
 
     case 82:
-      servo_val = steeringServo.read();
-      servo_val = servo_val - 2;
-      servo_val = (servo_val > (90 - 22)) ? (90 - 22) : servo_val;
-      steeringServo.write(servo_val);
+      servo_val = steeringServo.read() + 2 - 10;
+      servo_output = (servo_val < (90 - 35)) ? (90 - 35) : servo_val;
+      steeringServo.write(servo_output);
 
-      sprintf(msg, "Right 2 deg, new val %d\n", servo_val);
+      sprintf(msg, "OK, Right 2 deg, new val %d\n", servo_output);
       Serial.print(msg);
       Serial1.print(msg);
     break;
@@ -183,7 +220,14 @@ void actOnInstruction(byte instruction) {
     case 67:
       steeringServo.write(90);
 
-      sprintf(msg, "Centered steering servo, new value %d\n", 90);
+      sprintf(msg, "OK, Centered steering servo, new value %d\n", 90);
+      Serial.print(msg);
+      Serial1.print(msg);
+    break;
+
+    case 65:
+      radio_state_switch = true;
+      sprintf(msg, "OK, Entering automatic state\n");
       Serial.print(msg);
       Serial1.print(msg);
     break;

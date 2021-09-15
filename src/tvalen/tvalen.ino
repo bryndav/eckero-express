@@ -1,5 +1,6 @@
-#include <Arduino_LSM9DS1.h>
 #include <Servo.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BNO055.h>
 #include "TvalenDef.h"
 
 #define GPS_RX_PIN 2
@@ -10,6 +11,7 @@
 #define BLUE 24     
 #define GREEN 23
 
+Adafruit_BNO055 bno = Adafruit_BNO055(55);
 UART gpsSerial (digitalPinToPinName(GPS_RX_PIN), digitalPinToPinName(GPS_TX_PIN), NC, NC);
 Servo steeringServo;
 
@@ -30,13 +32,13 @@ double distance_to_target = 99999.0;
 int degree_diff;
 
 //Motor related variables
-pidData pid_steering = {0, 0.0, 0.0, 0.5, 0.0, 0.0, 200, 0, 0, 22, 0};
+pidData pid_steering = {0, 0.0, 0.0, 0.5, 0.0, 0.0, 200, 0, 0, 35, 0};
 
 int servo_signal;
 int steering;
 
 //Sensor related variables
-float magY, magX, magZ;
+uint8_t sys, gyro, accel, mag;
 float imu_heading, inclanation;
 float heading;
 
@@ -49,7 +51,7 @@ const int debug_rate = 1000;
 const int radio_poll_rate = 1000;
 
 //Radio com variables
-bool radio_ctrl = false;
+bool radio_state_switch = false;
 
 void setup() {
   
@@ -69,17 +71,22 @@ void setup() {
   digitalWrite(BLUE, LOW);
   digitalWrite(RED, HIGH);
   digitalWrite(RELAY_PIN, LOW);
-  
-  if (!IMU.begin()) {
-    Serial.println("Failed to initialize IMU!");
-    while (1);
+
+  while(Serial1.available()){
+    Serial1.read();
   }
-  
-  IMU.setMagnetFS(0);
-  IMU.setMagnetODR(8);
-  IMU.setMagnetOffset(-8.621420, 11.906535, 1.370036);
-  IMU.setMagnetSlope (1.230131, 1.603933, 1.566816); 
-  IMU.magnetUnit = MICROTESLA;  //   GAUSS   MICROTESLA   NANOTESLA
+
+  /* Initialise the sensor */
+  if(!bno.begin())
+  {
+    /* There was a problem detecting the BNO055 ... check your connections */
+    Serial.print("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
+    while(1);
+  }
+
+  delay(1000);
+  bno.setExtCrystalUse(true);
+  sys = gyro = accel = mag = 0;
 
   //Connect gps points
   pos_1.next = &pos_2;
@@ -89,23 +96,26 @@ void setup() {
 void loop() {
   current_time = millis();
 
-  if ((current_time - last_debug_print > debug_rate) && (STATE != RADIO_CTRL)){
+  if (current_time - last_debug_print > debug_rate){
     int resp = 0;
 
     //debugPrint();
     radioCom();
-    resp = pollRadioRec();
 
-    // If there is data in the serial recieve buffer, turn off motor and enter radio ctrl mode
-    if(resp){
-      digitalWrite(RELAY_PIN, LOW);
-      STATE = RADIO_CTRL;
+    if (STATE != RADIO_CTRL) {
+      resp = pollRadioRec();
+  
+      // If there is data in the serial recieve buffer, turn off motor and enter radio ctrl mode
+      if(resp){
+        Serial.println("Entering manual mode.");
+        digitalWrite(RELAY_PIN, LOW);
+        steeringServo.write(90);
+        STATE = RADIO_CTRL;
+      }
     }
     
     last_debug_print = current_time;
   }
-
-    
 
   switch(STATE)
   {
@@ -144,25 +154,26 @@ void loop() {
 
     case NORMAL_OPERATIONS:
 
+      if (current_time - last_gps_reading > gps_reading_rate) {
+        gps_data = getPos();
+        updatePosition(gps_data);
+    
+        distance_to_target = calcDistance(curr_pos, *destination);
+        pid_steering.setpoint = calcBearing(curr_pos, *destination);
+
+        last_gps_reading = current_time;
+      }
+
       if (current_time - last_heading_reading > heading_reading_rate){
         readHeading();
         
-        degree_diff = calcAngle(imu_heading, pid_steering.setpoint);
-        steering = findTurnSide(imu_heading, pid_steering.setpoint);
+        degree_diff = calcAngle((int)imu_heading, (int)pid_steering.setpoint);
+        steering = findTurnSide((int)imu_heading, (int)pid_steering.setpoint);
         
         pidControl(&pid_steering, degree_diff, current_time);
         setSteering(pid_steering.control_signal, steering);
 
         last_heading_reading = current_time;
-      }
-
-      if (current_time - last_gps_reading > gps_reading_rate) {
-        gps_data = getPos();
-        updatePosition(gps_data);
-        last_gps_reading = current_time;
-    
-        distance_to_target = calcDistance(curr_pos, *destination);
-        pid_steering.setpoint = calcBearing(curr_pos, *destination);
       }
 
       if (distance_to_target < 3.0) {
@@ -202,9 +213,31 @@ void loop() {
     case RADIO_CTRL:
       char instruction;
 
+      if (current_time - last_heading_reading > heading_reading_rate){
+        readHeading();
+        
+        last_heading_reading = current_time;
+      }
+
+      if (current_time - last_gps_reading > gps_reading_rate) {
+        gps_data = getPos();
+        updatePosition(gps_data);
+    
+        distance_to_target = calcDistance(curr_pos, *destination);
+        pid_steering.setpoint = calcBearing(curr_pos, *destination);
+
+        last_gps_reading = current_time;        
+      }
+      
       if (Serial1.available()){
         instruction = recieveInstruction();
         actOnInstruction(instruction);
+      }
+
+      if(radio_state_switch){
+        STATE = NORMAL_OPERATIONS;
+        digitalWrite(RELAY_PIN, HIGH);
+        radio_state_switch = false;
       }
 
       break;

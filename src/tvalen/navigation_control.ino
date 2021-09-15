@@ -228,26 +228,6 @@ updatePosition (GPSData gps_pos)
   }
 }
 
-float
-readMagnometerDir(int num_readings)
-{
-  float mx, my, mz, mag_readings;
-  int reading;
-  
-  for(int i = 0; i < num_readings;){
-    if (IMU.magneticFieldAvailable()) {
-        IMU.readMagneticField(mx, my, mz);
-        mag_readings = (atan2(my, mx) * (180/M_PI));
-        
-        i++;
-      }
-  }
-
-  mag_readings = mag_readings / num_readings;
-
-  return mag_readings;
-}
-
 void 
 printPosition(){
 
