@@ -87,10 +87,14 @@ setSteering(int  ctrl_signal,
             int  dir)
 {
   int pwm_signal;
-  
-  pwm_signal = (dir > 0) ? (90 - ctrl_signal) : (90 + ctrl_signal);
+  const int rodder_offset = 0;
+  const int rodder_max = 135;
+  const int rodder_min = 45;
 
-  steeringServo.write(pwm_signal);
+  pwm_signal = (dir > 0) ? (90 - ctrl_signal - rodder_offset) : (90 + ctrl_signal - rodder_offset);
+  pwm_signal = checkMaxMin(rodder_max, rodder_min, pwm_signal);
+
+  steeringServo.write((int)pwm_signal);
 }
 
 

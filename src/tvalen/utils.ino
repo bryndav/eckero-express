@@ -60,9 +60,9 @@ debugPrint()
   }
 
   Serial.print("Target longitude: ");
-  Serial.print(destination->longitude, 6);
+  Serial.print(destination.longitude, 6);
   Serial.print("\tTarget latitude: ");
-  Serial.println(destination->latitude, 6);
+  Serial.println(destination.latitude, 6);
   Serial.print("Distance to target: ");
   Serial.print(distance_to_target);
   Serial.print("\tBearing to target: ");

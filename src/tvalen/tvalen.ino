@@ -23,10 +23,18 @@ const int earth_radius = 6371000;
 
 struct GPSData gps_data = {" ", 0.0, 'F', 0.0, 'F', 0, 0, 0.0, 0.0, false};
 
-struct pos pos_1 = {59.301336, 18.037656, NULL};
-struct pos pos_2 = {59.301481, 18.037543, NULL};
-struct pos curr_pos = {0.0, 0.0, NULL};
-struct pos* destination = NULL;
+struct pos travel_plan[] = {
+  {59.311068, 17.986790},
+  {59.311059, 17.985079},
+  {59.311433, 17.985117},
+  {59.311311, 17.986748},
+  {59.311795, 17.987684},
+};
+
+struct pos curr_pos = {0.0, 0.0};
+struct pos destination = {0.0, 0.0};
+const int number_of_positions = sizeof travel_plan / sizeof travel_plan[0];
+int pos_index = 0;
 
 double distance_to_target = 99999.0;
 int degree_diff;
@@ -43,8 +51,7 @@ float imu_heading, inclanation;
 float heading;
 
 //Time related variables
-unsigned long last_gps_reading, last_heading_reading, last_debug_print, last_radio_poll;
-unsigned long current_time;
+unsigned long last_gps_reading, last_heading_reading, last_debug_print, last_radio_poll, current_time;
 const int heading_reading_rate = 250;
 const int gps_reading_rate = 1000;
 const int debug_rate = 1000;
@@ -87,9 +94,6 @@ void setup() {
   delay(1000);
   bno.setExtCrystalUse(true);
   sys = gyro = accel = mag = 0;
-
-  //Connect gps points
-  pos_1.next = &pos_2;
 }
 
 
@@ -97,9 +101,15 @@ void loop() {
   current_time = millis();
 
   if (current_time - last_debug_print > debug_rate){
-    int resp = 0;
-
     //debugPrint();
+
+    
+    last_debug_print = current_time;
+  }
+
+  if (current_time - last_radio_poll > radio_poll_rate){
+    int resp = 0;
+    
     radioCom();
 
     if (STATE != RADIO_CTRL) {
@@ -107,15 +117,16 @@ void loop() {
   
       // If there is data in the serial recieve buffer, turn off motor and enter radio ctrl mode
       if(resp){
-        Serial.println("Entering manual mode.");
+        Serial1.println("OK, Entering manual mode.");
         digitalWrite(RELAY_PIN, LOW);
         steeringServo.write(90);
         STATE = RADIO_CTRL;
       }
     }
     
-    last_debug_print = current_time;
+    last_radio_poll = current_time;
   }
+
 
   switch(STATE)
   {
@@ -124,6 +135,7 @@ void loop() {
 
       if (gps_data.valid){
         updatePosition(gps_data);
+        last_gps_reading = current_time;
         
         STATE = PLAN_COURSE;
       }
@@ -131,24 +143,32 @@ void loop() {
       break;
 
     case PLAN_COURSE:
-
-      if (destination != NULL) {
-        destination = destination->next;
-      }else {
-        Serial.println("Set position!");
-        destination = &pos_1;
-      }
-
-      pid_steering.setpoint = calcBearing(curr_pos, *destination);
-      last_gps_reading = current_time;
+      int next_state;
 
       digitalWrite(RELAY_PIN, HIGH);
-      
       digitalWrite(GREEN, LOW);
       digitalWrite(BLUE, HIGH);
       digitalWrite(RED, LOW);
+
+      if (destination.longitude == 0.0 && destination.latitude == 0.0) {
+        destination = travel_plan[pos_index];
+
+        next_state = NORMAL_OPERATIONS;
+      }else if (pos_index < (number_of_positions - 1)) {
+        pos_index++;
+        destination = travel_plan[pos_index];
+
+        next_state = NORMAL_OPERATIONS;
+      }else {
+        Serial.println("Reached final destination");
+
+        next_state = TARGET_REACHED;
+      }
+
+      pid_steering.setpoint = calcBearing(curr_pos, destination);
+      last_gps_reading = current_time;
       
-      STATE = NORMAL_OPERATIONS;
+      STATE = next_state;
 
       break;
 
@@ -158,8 +178,8 @@ void loop() {
         gps_data = getPos();
         updatePosition(gps_data);
     
-        distance_to_target = calcDistance(curr_pos, *destination);
-        pid_steering.setpoint = calcBearing(curr_pos, *destination);
+        distance_to_target = calcDistance(curr_pos, destination);
+        pid_steering.setpoint = calcBearing(curr_pos, destination);
 
         last_gps_reading = current_time;
       }
@@ -184,28 +204,19 @@ void loop() {
 
     case TARGET_REACHED:
  
-      if(destination->next){
-        STATE = PLAN_COURSE;
-      }else {
-          digitalWrite(RELAY_PIN, LOW);
-          Serial1.println("Reached final destination....");
-          Serial.println("Reached final destination....");
+      digitalWrite(RELAY_PIN, LOW);
 
-          // Reached final destination, stop
-          while(1){
-            
-            digitalWrite(GREEN, LOW);
-            digitalWrite(BLUE, LOW);
-            digitalWrite(RED, LOW);
+      // Reached final destination, stop
+      while(1){
+        digitalWrite(GREEN, LOW);
+        digitalWrite(BLUE, LOW);
+        digitalWrite(RED, LOW);
 
-            delay(1000);
+        delay(1000);
 
-            digitalWrite(GREEN, HIGH);
-            digitalWrite(BLUE, LOW);
-            digitalWrite(RED, LOW);
-
-            delay(1000);
-          }
+        digitalWrite(GREEN, HIGH);
+        digitalWrite(BLUE, LOW);
+        digitalWrite(RED, LOW);        
       }
 
       break;
@@ -223,8 +234,8 @@ void loop() {
         gps_data = getPos();
         updatePosition(gps_data);
     
-        distance_to_target = calcDistance(curr_pos, *destination);
-        pid_steering.setpoint = calcBearing(curr_pos, *destination);
+        distance_to_target = calcDistance(curr_pos, destination);
+        pid_steering.setpoint = calcBearing(curr_pos, destination);
 
         last_gps_reading = current_time;        
       }
