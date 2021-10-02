@@ -39,7 +39,6 @@ typedef enum {
   WAIT_FOR_GPS = 10,
   PLAN_COURSE = 20,
   NORMAL_OPERATIONS = 40,
-  TARGET_REACHED = 50,
   RADIO_CTRL = 60,
 };
 

@@ -38,9 +38,6 @@ debugPrint()
     case NORMAL_OPERATIONS:
       Serial.println("NORMAL_OPERATIONS");
       break;
-    case TARGET_REACHED:
-      Serial.println("TARGET_REACHED");
-      break;
   }
   
   Serial.print("Longitude: ");
@@ -82,19 +79,11 @@ debugPrint()
 }
 
 void radioCom()
-{
-  //State
-  char state[64];
-  sprintf(state, "ST,%d\n", STATE);
-  Serial.print(state);
-  Serial1.print(state);
-  
-  delay(60);
-  
+{  
   //Longitude
   char longi[64];
   sprintf(longi, "LT,%f\n", curr_pos.longitude);
-  Serial.print(longi);
+  //Serial.print(longi);
   Serial1.print(longi);
   
   delay(60);
@@ -102,7 +91,7 @@ void radioCom()
   //Latitude
   char lat[64];
   sprintf(lat, "LA,%f\n", curr_pos.latitude);
-  Serial.print(lat);
+  //Serial.print(lat);
   Serial1.print(lat);
   
   delay(60);
@@ -110,58 +99,68 @@ void radioCom()
   //Heading
   char head[64];
   sprintf(head, "HE,%f\n", imu_heading);
-  Serial.print(head);
+  //Serial.print(head);
   Serial1.print(head);
   
   delay(60);
   
-  //Servo
-  char serv[64];
-  sprintf(serv, "SE,%d\n", pid_steering.control_signal);
-  Serial.print(serv);
-  Serial1.print(serv);
+  if (STATE != RADIO_CTRL) {
+    //State
+    char state[64];
+    sprintf(state, "ST,%d\n", STATE);
+    //Serial.print(state);
+    Serial1.print(state);
+    
+    delay(60);  
+    
+    //Servo
+    char serv[64];
+    sprintf(serv, "SE,%d\n", pid_steering.control_signal);
+    //Serial.print(serv);
+    Serial1.print(serv);
+    
+    delay(60);
+    
+    //Distance to target
+    char distance_to[64];
+    sprintf(distance_to, "DT,%f\n", distance_to_target);
+    //Serial.print(distance_to);
+    Serial1.print(distance_to);
+    
+    delay(60);
   
-  delay(60);
+    //Syst
+    char syst[64];
+    sprintf(syst, "SY,%d\n", sys);
+    //Serial.print(syst);
+    Serial1.print(syst);
+    
+    delay(60);
   
-  //Distance to target
-  char distance_to[64];
-  sprintf(distance_to, "DT,%f\n", distance_to_target);
-  Serial.print(distance_to);
-  Serial1.print(distance_to);
+    //Gyro
+    char gyr[64];
+    sprintf(gyr, "GY,%d\n", gyro);
+    //Serial.print(gyr);
+    Serial1.print(gyr);
+    
+    delay(60);
   
-  delay(60);
-
-  //Syst
-  char syst[64];
-  sprintf(syst, "SY,%d\n", sys);
-  Serial.print(syst);
-  Serial1.print(syst);
+    //Mag
+    char magn[64];
+    sprintf(magn, "MA,%d\n", mag);
+    //Serial.print(magn);
+    Serial1.print(magn);
+    
+    delay(60);
   
-  delay(60);
-
-  //Gyro
-  char gyr[64];
-  sprintf(gyr, "GY,%d\n", gyro);
-  Serial.print(gyr);
-  Serial1.print(gyr);
-  
-  delay(60);
-
-  //Mag
-  char magn[64];
-  sprintf(magn, "MA,%d\n", mag);
-  Serial.print(magn);
-  Serial1.print(magn);
-  
-  delay(60);
-
-  //Acc
-  char acc[64];
-  sprintf(acc, "AC,%d\n", accel);
-  Serial.print(acc);
-  Serial1.print(acc);
-  
-  delay(60);
+    //Acc
+    char acc[64];
+    sprintf(acc, "AC,%d\n", accel);
+    //Serial.print(acc);
+    Serial1.print(acc);
+    
+    delay(60);
+  }
 }
 
 bool pollRadioRec() {
@@ -202,7 +201,7 @@ void actOnInstruction(byte instruction) {
       servo_output = (servo_val > (90 + 35)) ? (90 + 35) : servo_val;
       steeringServo.write(servo_output);
 
-      sprintf(msg, "OK, Left 2 deg, new val %d\n", servo_output);
+      sprintf(msg, "OK, Left 10 deg, new val %d\n", servo_output);
       Serial.print(msg);
       Serial1.print(msg);
     break;
@@ -212,13 +211,13 @@ void actOnInstruction(byte instruction) {
       servo_output = (servo_val < (90 - 35)) ? (90 - 35) : servo_val;
       steeringServo.write(servo_output);
 
-      sprintf(msg, "OK, Right 2 deg, new val %d\n", servo_output);
+      sprintf(msg, "OK, Right 10 deg, new val %d\n", servo_output);
       Serial.print(msg);
       Serial1.print(msg);
     break;
     
     case 67:
-      steeringServo.write(90);
+      setSteering(0, 1);
 
       sprintf(msg, "OK, Centered steering servo, new value %d\n", 90);
       Serial.print(msg);
