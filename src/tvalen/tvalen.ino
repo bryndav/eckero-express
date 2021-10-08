@@ -51,13 +51,14 @@ float imu_heading, inclanation;
 float heading;
 
 //Time related variables
-unsigned long last_gps_reading, last_heading_reading, last_debug_print, last_radio_poll, current_time;
+unsigned long last_gps_reading, last_heading_reading, last_debug_print, last_radio_com, current_time;
 const int heading_reading_rate = 250;
 const int gps_reading_rate = 1000;
 const int debug_rate = 2000;
-const int radio_poll_rate = 50;
+const int radio_com_rate = 100;
 
 //Radio com variables
+int radio_com_index = LONGITUDE_PRINT;
 bool radio_state_switch = false;
 
 void setup() {
@@ -102,18 +103,22 @@ void loop() {
 
   if (current_time - last_debug_print > debug_rate){
     //debugPrint();
-    radioCom();
     
     last_debug_print = current_time;
   }
 
-  if (current_time - last_radio_poll > radio_poll_rate){
+  if (current_time - last_radio_com > radio_com_rate){
     byte resp = 0;
     byte instruction = 0;
 
+    sendSystemVars();
+
     if (STATE != RADIO_CTRL) {
       resp = pollRadioRec();
-      instruction = Serial1.read();
+
+      if (resp) {
+       instruction = Serial1.read(); 
+      }
   
       // If there is data in the serial recieve buffer, turn off motor and enter radio ctrl mode
     if((instruction == 71) || (instruction == 83) || (instruction == 76) || (instruction == 82) || (instruction == 67) || (instruction == 65) || (instruction == 77)){
@@ -121,14 +126,10 @@ void loop() {
       digitalWrite(RELAY_PIN, LOW);
       setSteering(0, 1);
       STATE = RADIO_CTRL;
-    }else{
-      while(Serial1.available()){
-        Serial1.read();
-      }
     }
   }
     
-  last_radio_poll = current_time;
+  last_radio_com = current_time;
 }
 
 
