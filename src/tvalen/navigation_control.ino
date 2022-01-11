@@ -78,7 +78,7 @@ getPos()
   } 
 
   // Check if position should be considered valid
-  if(tmpPos.quality >= 1 && tmpPos.numSats >= 6 && newCoordinates(tmpPos.longitude, tmpPos.latitude)){
+  if(tmpPos.quality >= 1 && tmpPos.numSats >= 3 && newCoordinates(tmpPos.longitude, tmpPos.latitude)){
     tmpPos.valid = true;
   }else{
     tmpPos.valid = false;
@@ -226,26 +226,6 @@ updatePosition (GPSData gps_pos)
 
     heading = gps_pos.bearing;
   }
-}
-
-float
-readMagnometerDir(int num_readings)
-{
-  float mx, my, mz, mag_readings;
-  int reading;
-  
-  for(int i = 0; i < num_readings;){
-    if (IMU.magneticFieldAvailable()) {
-        IMU.readMagneticField(mx, my, mz);
-        mag_readings = (atan2(my, mx) * (180/M_PI));
-        
-        i++;
-      }
-  }
-
-  mag_readings = mag_readings / num_readings;
-
-  return mag_readings;
 }
 
 void 
