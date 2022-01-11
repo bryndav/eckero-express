@@ -87,7 +87,7 @@ setSteering(int  ctrl_signal,
             int  dir)
 {
   int pwm_signal, tmp_signal;
-  const int rodder_offset = 0;
+  const int rodder_offset = 2;
   const int rodder_max = 135;
   const int rodder_min = 45;
 
